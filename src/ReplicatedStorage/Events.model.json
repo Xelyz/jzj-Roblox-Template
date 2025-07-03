@@ -1,0 +1,25 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+        {
+            "ClassName": "Folder",
+            "Name": "Server",
+            "Children": [
+                {
+                    "ClassName": "BindableEvent",
+                    "Name": "GameInitRequest"
+                }
+            ]
+        },
+        {
+            "ClassName": "Folder", 
+            "Name": "Client",
+            "Children": [
+                {
+                    "ClassName": "BindableEvent",
+                    "Name": "GameGuiCreated"
+                }
+            ]
+        }
+    ]
+} 

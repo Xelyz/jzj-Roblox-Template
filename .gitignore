@@ -1,0 +1,15 @@
+# Project place file
+/Treasure.rbxlx
+
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+
+.cursor
+.vscode
+
+sourcemap.json
+aftman.toml
+default.project.json
+
+.DS_Store

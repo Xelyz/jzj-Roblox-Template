@@ -1,0 +1,210 @@
+-- UIUtils - 简化的UI工具模块
+
+local UI = {}
+
+-- 简化的颜色配置
+UI.Colors = {
+    Background = Color3.fromRGB(25, 25, 35),
+    Panel = Color3.fromRGB(40, 40, 50),
+    
+    ButtonGreen = Color3.fromRGB(60, 120, 60),
+    ButtonRed = Color3.fromRGB(120, 60, 60),
+    ButtonBlue = Color3.fromRGB(60, 60, 120),
+    ButtonGray = Color3.fromRGB(80, 80, 100),
+    ButtonDisabled = Color3.fromRGB(100, 100, 100),
+    
+    TextWhite = Color3.fromRGB(255, 255, 255),
+    TextGray = Color3.fromRGB(200, 200, 200),
+    TextGreen = Color3.fromRGB(100, 255, 100),
+    TextYellow = Color3.fromRGB(255, 255, 100),
+    TextRed = Color3.fromRGB(255, 100, 100),
+    
+    Border = Color3.fromRGB(100, 100, 120),
+    BorderAccent = Color3.fromRGB(120, 120, 140)
+}
+
+-- 创建ScreenGui
+function UI.createScreen(name)
+    local screen = Instance.new("ScreenGui")
+    screen.Name = name
+    screen.ResetOnSpawn = false
+    screen.IgnoreGuiInset = true
+    screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    return screen
+end
+
+-- 创建背景Frame
+function UI.createBackground(parent, useGradient)
+    local bg = Instance.new("Frame")
+    bg.Name = "BackgroundFrame"
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.Position = UDim2.new(0, 0, 0, 0)
+    bg.BackgroundColor3 = UI.Colors.Background
+    bg.BorderSizePixel = 0
+    bg.Parent = parent
+    
+    if useGradient then
+        local gradient = Instance.new("UIGradient")
+        gradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, UI.Colors.Background),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25))
+        }
+        gradient.Rotation = 45
+        gradient.Parent = bg
+    end
+    
+    return bg
+end
+
+-- 创建Frame
+function UI.createFrame(config)
+    local frame = Instance.new("Frame")
+    frame.Name = config.name or "Frame"
+    frame.Size = config.size or UDim2.new(1, 0, 1, 0)
+    frame.Position = config.position or UDim2.new(0, 0, 0, 0)
+    frame.BackgroundColor3 = config.backgroundColor or UI.Colors.Panel
+    frame.BackgroundTransparency = config.backgroundTransparency or 0
+    frame.BorderSizePixel = config.borderSize or 0
+    frame.BorderColor3 = config.borderColor or UI.Colors.Border
+    frame.Parent = config.parent
+    
+    if config.cornerRadius ~= false then
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = config.cornerRadius or UDim.new(0, 10)
+        corner.Parent = frame
+    end
+    
+    return frame
+end
+
+-- 创建Label
+function UI.createLabel(config)
+    local label = Instance.new("TextLabel")
+    label.Name = config.name or "Label"
+    label.Size = config.size or UDim2.new(1, 0, 1, 0)
+    label.Position = config.position or UDim2.new(0, 0, 0, 0)
+    label.Text = config.text or ""
+    label.TextSize = config.textSize or 18
+    label.TextColor3 = config.textColor or UI.Colors.TextWhite
+    label.Font = config.font or Enum.Font.SourceSans
+    label.TextXAlignment = config.textXAlignment or Enum.TextXAlignment.Center
+    label.TextYAlignment = config.textYAlignment or Enum.TextYAlignment.Center
+    label.TextWrapped = config.textWrapped or false
+    label.TextScaled = config.textScaled or false
+    label.BackgroundTransparency = config.transparent and 1 or 0
+    label.BackgroundColor3 = config.backgroundColor or UI.Colors.Panel
+    label.BorderSizePixel = config.borderSize or 0
+    label.BorderColor3 = config.borderColor or UI.Colors.Border
+    label.Parent = config.parent
+    
+    if config.cornerRadius ~= false and not config.transparent then
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = config.cornerRadius or UDim.new(0, 5)
+        corner.Parent = label
+    end
+    
+    return label
+end
+
+-- 创建Button
+function UI.createButton(config)
+    local button = Instance.new("TextButton")
+    button.Name = config.name or "Button"
+    button.Size = config.size or UDim2.new(0.2, 0, 0.08, 0)
+    button.Position = config.position or UDim2.new(0, 0, 0, 0)
+    button.Text = config.text or "Button"
+    button.TextSize = config.textSize or 18
+    button.TextColor3 = config.textColor or UI.Colors.TextWhite
+    button.Font = config.font or Enum.Font.SourceSansBold
+    button.BackgroundColor3 = config.backgroundColor or UI.Colors.ButtonGray
+    button.BorderSizePixel = 0
+    button.Parent = config.parent
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = button
+    
+    if config.onClick then
+        button.MouseButton1Click:Connect(config.onClick)
+    end
+    
+    return button
+end
+
+-- 创建ScrollingFrame
+function UI.createScrollingFrame(config)
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.Name = config.name or "ScrollFrame"
+    scrollFrame.Size = config.size or UDim2.new(1, 0, 1, 0)
+    scrollFrame.Position = config.position or UDim2.new(0, 0, 0, 0)
+    scrollFrame.BackgroundColor3 = config.backgroundColor or UI.Colors.Panel
+    scrollFrame.BorderSizePixel = config.borderSize or 2
+    scrollFrame.BorderColor3 = config.borderColor or UI.Colors.Border
+    scrollFrame.ScrollBarThickness = config.scrollBarThickness or 10
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scrollFrame.Parent = config.parent
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = scrollFrame
+    
+    if config.listLayout then
+        local layout = Instance.new("UIListLayout")
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Padding = config.listPadding or UDim.new(0, 5)
+        layout.Parent = scrollFrame
+    end
+    
+    return scrollFrame
+end
+
+-- 创建标题
+function UI.createTitle(text, parent, size, position)
+    return UI.createLabel({
+        name = "TitleLabel",
+        text = text,
+        parent = parent,
+        size = size or UDim2.new(1, 0, 0.1, 0),
+        position = position or UDim2.new(0, 0, 0.05, 0),
+        textSize = 36,
+        font = Enum.Font.SourceSansBold,
+        transparent = true
+    })
+end
+
+-- 添加圆角
+function UI.addCorner(element, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = radius or UDim.new(0, 8)
+    corner.Parent = element
+    return corner
+end
+
+-- 设置按钮启用/禁用
+function UI.setButtonEnabled(button, enabled)
+    if enabled then
+        button.BackgroundColor3 = button:GetAttribute("originalColor") or UI.Colors.ButtonGreen
+        button.TextColor3 = UI.Colors.TextWhite
+    else
+        if not button:GetAttribute("originalColor") then
+            button:SetAttribute("originalColor", button.BackgroundColor3)
+        end
+        button.BackgroundColor3 = UI.Colors.ButtonDisabled
+        button.TextColor3 = UI.Colors.TextGray
+    end
+end
+
+-- 按钮样式
+function UI.styleButton(button, style)
+    if style == "success" then
+        button.BackgroundColor3 = UI.Colors.ButtonGreen
+    elseif style == "danger" then
+        button.BackgroundColor3 = UI.Colors.ButtonRed
+    elseif style == "primary" then
+        button.BackgroundColor3 = UI.Colors.ButtonBlue
+    else
+        button.BackgroundColor3 = UI.Colors.ButtonGray
+    end
+end
+
+return UI 

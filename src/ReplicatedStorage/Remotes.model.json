@@ -1,0 +1,74 @@
+{
+    "Name": "Remotes",
+    "ClassName": "Folder",
+    "Children": [
+        {
+            "Name": "RoomCreateRequest",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "RoomJoinRequest",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "RoomLeaveRequest",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "PlayerInput",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "RoundResult",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "GameStateUpdate",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "GameAborted",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "GameFinished",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "RoomPlayerUpdate",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "RoomPlayerReady",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "RoomStartGame",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "GetRoomList",
+            "ClassName": "RemoteFunction"
+        },
+        {
+            "Name": "GetLeaderboard",
+            "ClassName": "RemoteFunction"
+        },
+        {
+            "Name": "GetPlayerRank",
+            "ClassName": "RemoteFunction"
+        },
+        {
+            "Name": "MatchStarted",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "MatchMessage",
+            "ClassName": "RemoteEvent"
+        },
+        {
+            "Name": "ReturnToRoomRequest",
+            "ClassName": "RemoteEvent"
+        }
+    ]
+}
