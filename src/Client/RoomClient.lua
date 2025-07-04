@@ -228,7 +228,10 @@ function showRoomList()
         -- 显示房间内玩家头像（最多显示2个）
         for i, playerData in ipairs(roomData.players) do
             if i <= 2 then
-                local avatarContainer = UI.createAvatarImage(avatarFrame, playerData.userId)
+                local avatarContainer = UI.createAvatarImage({
+                    parent = avatarFrame,
+                    userId = playerData.userId,
+                })
                 avatarContainer.Size = UDim2.new(0, 40, 0, 40)
                 avatarContainer.Position = UDim2.new((i-1) * 0.5, 5, 0.5, -20)
                 
@@ -379,7 +382,10 @@ local function createPlayerCard(parent, playerData, index, isHost)
     end
     
     -- 头像容器
-    local avatarContainer = UI.createAvatarImage(playerCard, playerData.userId)
+    local avatarContainer = UI.createAvatarImage({
+        parent = playerCard,
+        userId = playerData.userId,
+    })
     avatarContainer.Position = UDim2.new(0.5, -60, 0, 35)
     avatarContainer.Size = UDim2.new(0, 120, 0, 120)
     

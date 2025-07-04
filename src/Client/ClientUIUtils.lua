@@ -67,13 +67,13 @@ function UI.createFrame(config)
     frame.BorderSizePixel = config.borderSize or 0
     frame.BorderColor3 = config.borderColor or UI.Colors.Border
     frame.Parent = config.parent
-    
+    frame.ZIndex = config.zIndex or 0
+
     if config.corner then
         local corner = Instance.new("UICorner")
         corner.CornerRadius = config.cornerRadius or UDim.new(0, 10)
         corner.Parent = frame
     end
-    
     return frame
 end
 
@@ -96,13 +96,13 @@ function UI.createLabel(config)
     label.BorderSizePixel = config.borderSize or 0
     label.BorderColor3 = config.borderColor or UI.Colors.Border
     label.Parent = config.parent
-    
+    label.ZIndex = config.zIndex or 0
+
     if config.corner and not config.transparent then
         local corner = Instance.new("UICorner")
         corner.CornerRadius = config.cornerRadius or UDim.new(0, 5)
         corner.Parent = label
     end
-    
     return label
 end
 
@@ -120,19 +120,16 @@ function UI.createButton(config)
     button.BorderSizePixel = config.borderSize or 0
     button.BorderColor3 = config.borderColor or UI.Colors.Border
     button.Parent = config.parent
+    button.ZIndex = config.zIndex or 0
 
-    button:SetAttribute("originalColor", button.BackgroundColor3)
-    
     if config.corner then
         local corner = Instance.new("UICorner")
         corner.CornerRadius = config.cornerRadius or UDim.new(0, 8)
         corner.Parent = button
     end
-    
     if config.onClick then
         button.MouseButton1Click:Connect(config.onClick)
     end
-    
     return button
 end
 
@@ -148,20 +145,19 @@ function UI.createScrollingFrame(config)
     scrollFrame.ScrollBarThickness = config.scrollBarThickness or 10
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     scrollFrame.Parent = config.parent
-    
+    scrollFrame.ZIndex = config.zIndex or 0
+
     if config.corner then
         local corner = Instance.new("UICorner")
         corner.CornerRadius = config.cornerRadius or UDim.new(0, 10)
         corner.Parent = scrollFrame
     end
-    
     if config.listLayout then
         local layout = Instance.new("UIListLayout")
         layout.SortOrder = Enum.SortOrder.LayoutOrder
         layout.Padding = config.listPadding or UDim.new(0, 5)
         layout.Parent = scrollFrame
     end
-    
     return scrollFrame
 end
 
@@ -211,14 +207,15 @@ function UI.styleButton(button, style)
     end
 end
 
-function UI.createAvatarImage(parent, userId)
+function UI.createAvatarImage(config)
     local avatarSize = UDim2.new(0.8, 0, 0.5, 0)
     
     local container = UI.createFrame({
         name = "AvatarContainer",
-        parent = parent,
+        parent = config.parent,
         size = avatarSize,
         backgroundTransparency = 1,
+        zIndex = config.zIndex or 0
     })
 
     local background = UI.createFrame({
@@ -231,6 +228,7 @@ function UI.createAvatarImage(parent, userId)
         borderColor = Color3.fromRGB(150, 200, 150),
         corner = true,
         cornerRadius = UDim.new(0.5, 0),
+        zIndex = config.zIndex or 0
     })
     background.AnchorPoint = Vector2.new(0.5, 0.5)
 
@@ -243,8 +241,9 @@ function UI.createAvatarImage(parent, userId)
     image.Name = "AvatarImage"
     image.Size = UDim2.new(1, -4, 1, -4)
     image.Position = UDim2.new(0, 2, 0, 2)
-    image.Image = "rbxthumb://type=AvatarHeadShot&id=" .. userId .. "&w=150&h=150"
+    image.Image = "rbxthumb://type=AvatarHeadShot&id=" .. config.userId .. "&w=150&h=150"
     image.BackgroundTransparency = 1
+    image.ZIndex = config.zIndex or 0
     image.Parent = background
     UI.addCorner(image, UDim.new(0.5, 0))
     
