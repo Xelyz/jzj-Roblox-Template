@@ -117,13 +117,25 @@ function SignalManager.GetRemote(signalName)
 		function signal:Connect(callback)
 			return remoteEvent.OnServerEvent:Connect(callback)
 		end
+
+		function signal:Fire(player, ...)
+			remoteEvent:FireClient(player, ...)
+		end
 		
 		function signal:FireClient(player, ...)
 			remoteEvent:FireClient(player, ...)
 		end
 
+		function signal:FireAll(...)
+			remoteEvent:FireAllClients(...)
+		end
+
 		function signal:FireAllClients(...)
 			remoteEvent:FireAllClients(...)
+		end
+
+		function signal:FireAllExcept(player, ...)
+			remoteEvent:FireAllClientsExcept(player, ...)
 		end
 
 		function signal:FireAllClientsExcept(player, ...)
