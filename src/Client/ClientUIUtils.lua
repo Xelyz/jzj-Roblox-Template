@@ -121,6 +121,7 @@ function UI.createButton(config)
     button.BorderColor3 = config.borderColor or UI.Colors.Border
     button.Parent = config.parent
     button.ZIndex = config.zIndex or 0
+    button:SetAttribute("originalColor", button.BackgroundColor3)
 
     if config.corner then
         local corner = Instance.new("UICorner")
