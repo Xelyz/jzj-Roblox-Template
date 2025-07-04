@@ -11,7 +11,7 @@ local RoomJoinRequest = SignalManager.GetRemote("RoomJoinRequest")
 local RoomLeaveRequest = SignalManager.GetRemote("RoomLeaveRequest")
 local RoomStartGame = SignalManager.GetRemote("RoomStartGame")
 local RoomPlayerUpdate = SignalManager.GetRemote("RoomPlayerUpdate")
-local GetRoomList = SignalManager.GetRemote("GetRoomList")
+local GetRoomList = SignalManager.GetRemoteFunction("GetRoomList")
 local MatchStarted = SignalManager.GetRemote("MatchStarted")
 local GameAborted = SignalManager.GetRemote("GameAborted")
 local GameFinished = SignalManager.GetRemote("GameFinished")
@@ -348,43 +348,19 @@ RoomStartGame:Connect(function(player, roomId)
     Utils.log("RoomManager", "Game started", matchId)
 end)
 
-GetRoomList.OnServerInvoke = function(player)
-    if not Utils.isValidPlayer(player) then return {} end
-    
-    local roomList = {}
-    for _, room in pairs(rooms) do
-        if not room.isGameStarted then
-            local validPlayers = {}
-            for _, p in ipairs(room.players) do
-                if Utils.isValidPlayer(p) then
-                    table.insert(validPlayers, {
-                        userId = p.UserId,
-                        name = p.Name,
-                        displayName = p.DisplayName,
-                        avatarUrl = getPlayerAvatarUrl(p)
-                    })
-                end
-            end
-            
-            if #validPlayers > 0 then
-                table.insert(roomList, {
-                    id = room.id,
-                    name = room.name,
-                    playerCount = #validPlayers,
-                    maxPlayers = Utils.config.maxPlayers,
-                    canJoin = #validPlayers < Utils.config.maxPlayers,
-                    host = room.host and {
-                        userId = room.host.UserId,
-                        name = room.host.DisplayName
-                    } or nil,
-                    players = validPlayers
-                })
-            end
-        end
-    end
-    
-    return roomList
-end
+GetRoomList:OnInvoke(function(player)
+	if not Utils.isValidPlayer(player) then return {} end
+	
+	local roomList = {}
+	for _, room in pairs(rooms) do
+		if not room.isGameStarted then
+			table.insert(roomList, getRoomData(room))
+		end
+	end
+	
+	Utils.log("RoomManager", "Room list sent")
+	return roomList
+end)
 
 ReturnToRoomRequest:Connect(function(player)
     if not Utils.isValidPlayer(player) then return end

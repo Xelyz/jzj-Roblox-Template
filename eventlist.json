@@ -1,6 +1,6 @@
 [
-  {"name": "GetLeaderboard", "type": "Remote"},
-  {"name": "GetPlayerRank", "type": "Remote"},
+  {"name": "GetLeaderboard", "type": "RemoteFunction"},
+  {"name": "GetPlayerRank", "type": "RemoteFunction"},
   {"name": "PlayerInput", "type": "Remote"},
   {"name": "GameStateUpdate", "type": "Remote"},
   {"name": "GameAborted", "type": "Remote"},
@@ -12,7 +12,7 @@
   {"name": "RoomLeaveRequest", "type": "Remote"},
   {"name": "RoomStartGame", "type": "Remote"},
   {"name": "RoomPlayerUpdate", "type": "Remote"},
-  {"name": "GetRoomList", "type": "Remote"},
+  {"name": "GetRoomList", "type": "RemoteFunction"},
   {"name": "GameFinished", "type": "Remote"},
   {"name": "ReturnToRoomRequest", "type": "Remote"},
   {"name": "RoomPlayerReady", "type": "Remote"},

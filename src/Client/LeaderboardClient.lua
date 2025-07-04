@@ -10,8 +10,8 @@ local SignalManager = require(script.Parent.Parent.SignalManager)
 local UI = require(script.Parent.ClientUIUtils)
 
 -- 远程函数
-local GetLeaderboard = SignalManager.GetRemote("GetLeaderboard")
-local GetPlayerRank = SignalManager.GetRemote("GetPlayerRank")
+local GetLeaderboard = SignalManager.GetRemoteFunction("GetLeaderboard")
+local GetPlayerRank = SignalManager.GetRemoteFunction("GetPlayerRank")
 
 -- 显示排行榜界面
 function LeaderboardClient.ShowLeaderboard()
@@ -155,7 +155,7 @@ function LeaderboardClient.ShowLeaderboard()
     -- 加载排行榜数据
     local function loadLeaderboard()
         local success, leaderboardData = pcall(function()
-            return GetLeaderboard:InvokeServer()
+            return GetLeaderboard:Invoke()
         end)
         
         if success and leaderboardData then
@@ -173,7 +173,7 @@ function LeaderboardClient.ShowLeaderboard()
     -- 加载我的排名
     local function loadMyRank()
         local success, rankData = pcall(function()
-            return GetPlayerRank:InvokeServer()
+            return GetPlayerRank:Invoke()
         end)
         
         if success and rankData then

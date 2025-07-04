@@ -7,11 +7,11 @@ local SignalManager = require(script.Parent.Parent.SignalManager)
 local LeaderboardService = require(script.Parent.LeaderboardServiceServer)
 
 -- 远程函数
-local GetLeaderboard = SignalManager.GetRemote("GetLeaderboard")
-local GetPlayerRank = SignalManager.GetRemote("GetPlayerRank")
+local GetLeaderboard = SignalManager.GetRemoteFunction("GetLeaderboard")
+local GetPlayerRank = SignalManager.GetRemoteFunction("GetPlayerRank")
 
 -- 处理获取排行榜请求
-GetLeaderboard.OnServerInvoke = function(player, pageSize)
+GetLeaderboard:OnInvoke(function(player, pageSize)
     print("Player", player.Name, "requesting leaderboard data")
     pageSize = pageSize or 10
     if pageSize > 50 then
@@ -20,10 +20,10 @@ GetLeaderboard.OnServerInvoke = function(player, pageSize)
     local leaderboardData = LeaderboardService.GetLeaderboard(pageSize)
     print("Returning leaderboard data to", player.Name, ":", #leaderboardData, "entries")
     return leaderboardData
-end
+end)
 
 -- 处理获取玩家排名请求
-GetPlayerRank.OnServerInvoke = function(player)
+GetPlayerRank:OnInvoke(function(player)
     print("Player", player.Name, "requesting their rank")
     local rankData = LeaderboardService.GetPlayerRank(player)
     if rankData then
@@ -32,7 +32,7 @@ GetPlayerRank.OnServerInvoke = function(player)
         print("Could not get rank for player", player.Name)
     end
     return rankData
-end
+end)
 
 print("LeaderboardManager initialized and ready to handle requests")
 

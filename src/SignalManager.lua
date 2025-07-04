@@ -1,9 +1,9 @@
 --[[
-	一个健壮的信号管理器，用于处理同环境(BindableEvent)和跨环境(RemoteEvent)的通信。
+	一个健壮的信号管理器，用于处理同环境(BindableEvent)和跨环境(RemoteEvent/RemoteFunction)的通信。
 
 	功能:
 	- 提供统一的 API 来获取和使用信号。
-	- 自动管理 RemoteEvent 实例在 ReplicatedStorage 中的生命周期。
+	- 自动管理 RemoteEvent 和 RemoteFunction 实例在 ReplicatedStorage 中的生命周期。
 	- 懒加载：仅在首次请求时创建事件实例。
 	- 上下文感知：自动区分服务器和客户端环境，并提供相应的触发方法。
 
@@ -22,6 +22,11 @@
 	local onShowUI = SignalManager.GetRemote("OnShowUI")
 	-- [服务器上] onShowUI:FireClient(player, "Shop")
 	-- [客户端上] onShowUI:Connect(function(uiName) ... end)
+
+	-- 获取 Remote 函数 (Server-Client)
+	local getPlayerData = SignalManager.GetRemoteFunction("GetPlayerData")
+	-- [服务器上] getPlayerData:OnInvoke(function(player) return playerData end)
+	-- [客户端上] local data = getPlayerData:Invoke()
 ]]
 
 -- 服务
@@ -36,6 +41,7 @@ local REMOTES_FOLDER_NAME = "SignalRemotes_DO_NOT_EDIT" -- RemoteEvent实例的�
 -- 缓存
 local bindableSignals = {}
 local remoteSignals = {}
+local remoteFunctions = {}
 
 -- 模块主表
 local SignalManager = {}
@@ -150,6 +156,61 @@ function SignalManager.GetRemote(signalName)
 
 	remoteSignals[signalName] = signal
 	return signal
+end
+
+--================---- Remote Functions ----================--
+
+--[[
+	获取一个用于跨环境同步调用的 Remote 函数。
+	@param functionName string 函数的唯一名称
+	@return table 函数对象
+]]
+function SignalManager.GetRemoteFunction(functionName)
+	if remoteFunctions[functionName] then
+		return remoteFunctions[functionName]
+	end
+
+	local remotesFolder = getRemotesFolder()
+	local remoteFunc = remotesFolder:FindFirstChild(functionName)
+	if not remoteFunc then
+		remoteFunc = Instance.new("RemoteFunction")
+		remoteFunc.Name = functionName
+		remoteFunc.Parent = remotesFolder
+	end
+	
+	local funcObj = {}
+
+	if IS_SERVER then
+		-- 服务器端的 API
+		function funcObj:OnInvoke(callback)
+			remoteFunc.OnServerInvoke = callback
+		end
+		
+		function funcObj:InvokeClient(player, ...)
+			return remoteFunc:InvokeClient(player, ...)
+		end
+		
+	elseif IS_CLIENT then
+		-- 客户端的 API
+		function funcObj:OnInvoke(callback)
+			remoteFunc.OnClientInvoke = callback
+		end
+
+		function funcObj:Invoke(...)
+			return remoteFunc:InvokeServer(...)
+		end
+	end
+
+	function funcObj:Destroy()
+		-- 只有服务器有权销毁实例
+		if IS_SERVER then
+			remoteFunc:Destroy()
+		end
+		remoteFunctions[functionName] = nil
+	end
+
+	remoteFunctions[functionName] = funcObj
+	return funcObj
 end
 
 return SignalManager

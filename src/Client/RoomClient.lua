@@ -13,7 +13,7 @@ local RoomLeaveRequest = SignalManager.GetRemote("RoomLeaveRequest")
 local RoomStartGame = SignalManager.GetRemote("RoomStartGame")
 local RoomPlayerUpdate = SignalManager.GetRemote("RoomPlayerUpdate")
 local RoomPlayerReady = SignalManager.GetRemote("RoomPlayerReady")
-local GetRoomList = SignalManager.GetRemote("GetRoomList")
+local GetRoomList = SignalManager.GetRemoteFunction("GetRoomList")
 local MatchStarted = SignalManager.GetRemote("MatchStarted")
 local GameFinished = SignalManager.GetRemote("GameFinished")
 -- GetLeaderboard 和 GetPlayerRank 已移到 LeaderboardClient 模块中
@@ -243,14 +243,13 @@ function showRoomList()
             cornerRadius = UDim.new(0, 6)
         }
         
-        if roomData.canJoin == false then
+        if roomData.playerCount >= roomData.maxPlayers then
             joinButtonConfig.text = "Full"
             joinButtonConfig.backgroundColor = UI.Colors.ButtonDisabled
         else
             joinButtonConfig.text = "Join"
-            joinButtonConfig.backgroundColor = UI.Colors.ButtonGreen
+            joinButtonConfig.backgroundColor = UI.Colors.ButtonBlue
             joinButtonConfig.onClick = function()
-                print("Joining room:", roomData.id)
                 RoomJoinRequest:FireServer(roomData.id)
             end
         end
@@ -258,73 +257,88 @@ function showRoomList()
         UI.createButton(joinButtonConfig)
     end
 
-    -- 加载房间列表
-    local function loadRoomList()
+    -- 刷新房间列表
+    local function refreshRoomList()
         -- 清空现有列表
         for _, child in ipairs(listFrame:GetChildren()) do
-            if child:IsA("Frame") and child.Name == "RoomItem" then
+            if child:IsA("Frame") then
                 child:Destroy()
             end
         end
         
+        -- 获取并显示新列表
         local success, roomList = pcall(function()
-            return GetRoomList:InvokeServer()
+            return GetRoomList:Invoke()
         end)
         
         if success and roomList then
             if #roomList == 0 then
                 UI.createLabel({
                     name = "NoRoomsLabel",
-                    text = "No available rooms",
+                    text = "No available rooms. Why not create one?",
                     parent = listFrame,
                     size = UDim2.new(1, 0, 0, 50),
                     textSize = 18,
-                    textColor = Color3.fromRGB(150, 150, 150),
+                    textColor = UI.Colors.TextGray,
                     transparent = true
                 })
             else
-                for i, room in ipairs(roomList) do
-                    createRoomListItem(listFrame, room, i)
+                for i, roomData in ipairs(roomList) do
+                    createRoomListItem(listFrame, roomData, i)
                 end
             end
-            
-            -- 更新滚动区域大小
-            listFrame.CanvasSize = UDim2.new(0, 0, 0, listFrame.UIListLayout.AbsoluteContentSize.Y)
         else
-            print("Failed to get room list:", roomList)
+            UI.createLabel({
+                name = "ErrorLabel",
+                text = "Error loading rooms.",
+                parent = listFrame,
+                size = UDim2.new(1, 0, 0, 50),
+                textSize = 18,
+                textColor = UI.Colors.TextError,
+                transparent = true
+            })
+            warn("Failed to get room list:", roomList)
         end
+        
+        -- 更新滚动区域大小
+        listFrame.CanvasSize = UDim2.new(0, 0, 0, listFrame.UIListLayout.AbsoluteContentSize.Y)
     end
-
-    -- 按钮组
-    local buttonConfigs = {
-        {
-            name = "BackButton",
-            text = "Back to Main Menu",
-            position = UDim2.new(0.1, 0, 0.85, 0),
-            size = UDim2.new(0.2, 0, 0.08, 0),
-            backgroundColor = UI.Colors.ButtonGray,
-            cornerRadius = UDim.new(0, 6),
-            onClick = function() createMainMenu() end
-        },
-        {
-            name = "RefreshButton",
-            text = "Refresh List",
-            position = UDim2.new(0.7, 0, 0.85, 0),
-            size = UDim2.new(0.2, 0, 0.08, 0),
-            backgroundColor = UI.Colors.ButtonGreen,
-            cornerRadius = UDim.new(0, 6),
-            onClick = function() loadRoomList() end
-        }
-    }
     
-    for _, config in ipairs(buttonConfigs) do
-        config.parent = backgroundFrame
-        UI.createButton(config)
-    end
+    -- 返回和刷新按钮
+    local bottomFrame = UI.createFrame({
+        name = "BottomFrame",
+        parent = backgroundFrame,
+        size = UDim2.new(0.8, 0, 0.1, 0),
+        position = UDim2.new(0.1, 0, 0.82, 0),
+        backgroundTransparency = 1
+    })
+    
+    UI.createButton({
+        name = "BackButton",
+        text = "Back",
+        parent = bottomFrame,
+        size = UDim2.new(0.4, 0, 0.8, 0),
+        position = UDim2.new(0.05, 0, 0.1, 0),
+        backgroundColor = UI.Colors.ButtonGray,
+        cornerRadius = UDim.new(0, 6),
+        onClick = createMainMenu
+    })
+    
+    UI.createButton({
+        name = "RefreshButton",
+        text = "Refresh",
+        parent = bottomFrame,
+        size = UDim2.new(0.4, 0, 0.8, 0),
+        position = UDim2.new(0.55, 0, 0.1, 0),
+        backgroundColor = UI.Colors.ButtonBlue,
+        cornerRadius = UDim.new(0, 6),
+        onClick = refreshRoomList
+    })
     
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    loadRoomList()
-    print("Room list created")
+    
+    -- 首次加载
+    refreshRoomList()
 end
 
 -- 创建通用的玩家卡片函数
