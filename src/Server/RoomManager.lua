@@ -233,10 +233,9 @@ RoomLeaveRequest:Connect(function(player)
         return
     end
     
-    local match = MatchService.GetMatchByRoomId(roomId)
-    if match and match:IsPlayerInMatch(player) then
+    local room = rooms[roomId]
+    if room.isGameStarted then
         Utils.log("RoomManager", "Player ".. player.Name .." cannot leave room during an active match.")
-        -- 可以选择向客户端发送一个错误提示
         return
     end
     

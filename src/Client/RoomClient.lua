@@ -4,7 +4,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- 导入SignalManager
-local SignalManager = require(script.Parent.SignalManager)
+local SignalManager = require(script.Parent.Parent.SignalManager)
 
 -- 远程事件
 local RoomCreateRequest = SignalManager.GetRemote("RoomCreateRequest")
