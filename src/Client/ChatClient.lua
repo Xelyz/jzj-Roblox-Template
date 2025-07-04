@@ -1,3 +1,5 @@
+local M = {}
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
@@ -225,3 +227,5 @@ MatchMessage:Connect(function(data)
         end
     end
 end) 
+
+return M

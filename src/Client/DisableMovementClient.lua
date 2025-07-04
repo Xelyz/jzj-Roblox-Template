@@ -1,4 +1,5 @@
 -- DisableMovement.client.lua - 禁用移动设备上的默认移动控制和交互
+local M = {}
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -144,3 +145,5 @@ if not _G.MovementDisabled then
     _G.MovementDisabled = true
     print("Movement controls successfully disabled for pure GUI game")
 end 
+
+return M

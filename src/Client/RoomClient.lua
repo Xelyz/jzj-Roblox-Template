@@ -1,4 +1,5 @@
 -- RoomClient - 房间系统客户端模块
+local M = {}
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -718,3 +719,4 @@ end)
 -- 初始化主菜单
 createMainMenu()
 
+return M

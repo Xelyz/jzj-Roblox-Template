@@ -1,4 +1,5 @@
 -- RoomManager - 房间管理器
+local M = {}
 
 local Players = game:GetService("Players")
 
@@ -446,3 +447,5 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 Utils.log("RoomManager", "RoomManager initialized") 
+
+return M
