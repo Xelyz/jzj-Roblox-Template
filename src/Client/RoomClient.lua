@@ -89,7 +89,8 @@ local function createMainMenu()
         size = UDim2.new(0.5, 0, 0.5, 0),
         position = UDim2.new(0.25, 0, 0.35, 0),
         borderSize = 2,
-        borderColor = UI.Colors.Border
+        borderColor = UI.Colors.Border,
+        corner = true
     })
     
     -- 创建按钮
@@ -100,6 +101,7 @@ local function createMainMenu()
             position = UDim2.new(0.1, 0, 0.15, 0),
             size = UDim2.new(0.8, 0, 0.2, 0),
             backgroundColor = UI.Colors.ButtonGreen,
+            corner = true,
             cornerRadius = UDim.new(0, 8),
             onClick = function()
                 local roomName = LocalPlayer.DisplayName .. "'s room"
@@ -113,6 +115,7 @@ local function createMainMenu()
             position = UDim2.new(0.1, 0, 0.4, 0),
             size = UDim2.new(0.8, 0, 0.2, 0),
             backgroundColor = UI.Colors.ButtonBlue,
+            corner = true,
             cornerRadius = UDim.new(0, 8),
             onClick = function()
                 showRoomList()
@@ -124,6 +127,7 @@ local function createMainMenu()
             position = UDim2.new(0.1, 0, 0.65, 0),
             size = UDim2.new(0.8, 0, 0.2, 0),
             backgroundColor = UI.Colors.ButtonGray,
+            corner = true,
             cornerRadius = UDim.new(0, 8),
             onClick = function()
                 showLeaderboard()
@@ -158,6 +162,7 @@ function showRoomList()
         size = UDim2.new(0.8, 0, 0.6, 0),
         position = UDim2.new(0.1, 0, 0.2, 0),
         listLayout = true,
+        corner = true,
         cornerRadius = UDim.new(0, 8)
     })
     
@@ -169,7 +174,8 @@ function showRoomList()
             size = UDim2.new(1, 0, 0, 80),
             backgroundColor = Color3.fromRGB(50, 50, 60),
             borderSize = 1,
-            borderColor = UI.Colors.BorderAccent
+            borderColor = UI.Colors.BorderAccent,
+            corner = true
         })
         roomItem.LayoutOrder = index
         
@@ -179,7 +185,8 @@ function showRoomList()
             parent = roomItem,
             size = UDim2.new(0.35, 0, 1, 0),
             position = UDim2.new(0.02, 0, 0, 0),
-            backgroundTransparency = 1
+            backgroundTransparency = 1,
+            corner = true
         })
         
         -- 房间名称
@@ -192,7 +199,7 @@ function showRoomList()
             textSize = 16,
             textXAlignment = Enum.TextXAlignment.Left,
             textYAlignment = Enum.TextYAlignment.Center,
-            transparent = true
+            transparent = true,
         })
         
         -- 玩家数量
@@ -221,16 +228,17 @@ function showRoomList()
         -- 显示房间内玩家头像（最多显示2个）
         for i, playerData in ipairs(roomData.players) do
             if i <= 2 then
-                local avatarImage = Instance.new("ImageLabel")
-                avatarImage.Size = UDim2.new(0, 40, 0, 40)
-                avatarImage.Position = UDim2.new((i-1) * 0.5, 5, 0.5, -20)
-                avatarImage.Image = playerData.avatarUrl
-                avatarImage.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-                avatarImage.BorderSizePixel = 1
-                avatarImage.BorderColor3 = roomData.host and playerData.userId == roomData.host.userId and UI.Colors.TextYellow or UI.Colors.Border
-                avatarImage.Parent = avatarFrame
+                local avatarContainer = UI.createAvatarImage(avatarFrame, playerData.userId)
+                avatarContainer.Size = UDim2.new(0, 40, 0, 40)
+                avatarContainer.Position = UDim2.new((i-1) * 0.5, 5, 0.5, -20)
                 
-                UI.addCorner(avatarImage, UDim.new(0.5, 0))
+                -- 如果是房主,添加特殊边框颜色
+                if roomData.host and playerData.userId == roomData.host.userId then
+                    local background = avatarContainer:FindFirstChild("AvatarBackground")
+                    if background then
+                        background.BorderColor3 = UI.Colors.TextYellow
+                    end
+                end
             end
         end
         
@@ -241,6 +249,7 @@ function showRoomList()
             size = UDim2.new(0.18, 0, 0.6, 0),
             position = UDim2.new(0.8, 0, 0.2, 0),
             textSize = 16,
+            corner = true,
             cornerRadius = UDim.new(0, 6)
         }
         
@@ -351,7 +360,8 @@ local function createPlayerCard(parent, playerData, index, isHost)
         position = UDim2.new(0, 30 + (index - 1) * 250, 0, 10),
         backgroundColor = Color3.fromRGB(50, 50, 60),
         borderSize = 2,
-        borderColor = isHost and UI.Colors.TextYellow or UI.Colors.BorderAccent
+        borderColor = isHost and UI.Colors.TextYellow or UI.Colors.BorderAccent,
+        corner = true
     })
     
     -- 房主标识
@@ -369,24 +379,9 @@ local function createPlayerCard(parent, playerData, index, isHost)
     end
     
     -- 头像容器
-    local avatarContainer = UI.createFrame({
-        name = "AvatarContainer",
-        parent = playerCard,
-        size = UDim2.new(0, 120, 0, 120),
-        position = UDim2.new(0.5, -60, 0, 35),
-        backgroundTransparency = 1
-    })
-    
-    local avatarImage = Instance.new("ImageLabel")
-    avatarImage.Size = UDim2.new(1, 0, 1, 0)
-    avatarImage.Position = UDim2.new(0, 0, 0, 0)
-    avatarImage.Image = playerData.avatarUrl
-    avatarImage.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    avatarImage.BorderSizePixel = 2
-    avatarImage.BorderColor3 = UI.Colors.Border
-    avatarImage.Parent = avatarContainer
-    
-    UI.addCorner(avatarImage, UDim.new(0.5, 0))
+    local avatarContainer = UI.createAvatarImage(playerCard, playerData.userId)
+    avatarContainer.Position = UDim2.new(0.5, -60, 0, 35)
+    avatarContainer.Size = UDim2.new(0, 120, 0, 120)
     
     -- 玩家名称
     UI.createLabel({
@@ -433,7 +428,8 @@ function showRoomInterface(roomData)
         size = UDim2.new(0.8, 0, 0.5, 0),
         position = UDim2.new(0.1, 0, 0.2, 0),
         borderSize = 2,
-        borderColor = UI.Colors.Border
+        borderColor = UI.Colors.Border,
+        corner = true
     })
     
     -- 按钮容器
@@ -453,6 +449,7 @@ function showRoomInterface(roomData)
             size = UDim2.new(0.25, 0, 0.8, 0),
             position = UDim2.new(0, 0, 0.1, 0),
             backgroundColor = UI.Colors.ButtonRed,
+            corner = true,
             cornerRadius = UDim.new(0, 6),
             onClick = function()
                 print("Leaving room")
@@ -466,6 +463,7 @@ function showRoomInterface(roomData)
             size = UDim2.new(0.3, 0, 0.8, 0),
             position = UDim2.new(0.7, 0, 0.1, 0),
             backgroundColor = UI.Colors.ButtonGreen,
+            corner = true,
             cornerRadius = UDim.new(0, 6),
             onClick = function()
                 if currentRoomData and currentRoomData.host and currentRoomData.host.userId == LocalPlayer.UserId then
@@ -480,6 +478,7 @@ function showRoomInterface(roomData)
             size = UDim2.new(0.3, 0, 0.8, 0),
             position = UDim2.new(0.35, 0, 0.1, 0),
             backgroundColor = UI.Colors.ButtonGreen,
+            corner = true,
             cornerRadius = UDim.new(0, 6),
             onClick = function()
                 print("Toggling ready status from room interface")

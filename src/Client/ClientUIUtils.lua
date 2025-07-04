@@ -68,7 +68,7 @@ function UI.createFrame(config)
     frame.BorderColor3 = config.borderColor or UI.Colors.Border
     frame.Parent = config.parent
     
-    if config.cornerRadius ~= false then
+    if config.corner then
         local corner = Instance.new("UICorner")
         corner.CornerRadius = config.cornerRadius or UDim.new(0, 10)
         corner.Parent = frame
@@ -97,7 +97,7 @@ function UI.createLabel(config)
     label.BorderColor3 = config.borderColor or UI.Colors.Border
     label.Parent = config.parent
     
-    if config.cornerRadius ~= false and not config.transparent then
+    if config.corner and not config.transparent then
         local corner = Instance.new("UICorner")
         corner.CornerRadius = config.cornerRadius or UDim.new(0, 5)
         corner.Parent = label
@@ -120,8 +120,10 @@ function UI.createButton(config)
     button.BorderSizePixel = config.borderSize or 0
     button.BorderColor3 = config.borderColor or UI.Colors.Border
     button.Parent = config.parent
+
+    button:SetAttribute("originalColor", button.BackgroundColor3)
     
-    if config.cornerRadius ~= false then
+    if config.corner then
         local corner = Instance.new("UICorner")
         corner.CornerRadius = config.cornerRadius or UDim.new(0, 8)
         corner.Parent = button
@@ -147,7 +149,7 @@ function UI.createScrollingFrame(config)
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     scrollFrame.Parent = config.parent
     
-    if config.cornerRadius ~= false then
+    if config.corner then
         local corner = Instance.new("UICorner")
         corner.CornerRadius = config.cornerRadius or UDim.new(0, 10)
         corner.Parent = scrollFrame
@@ -191,9 +193,6 @@ function UI.setButtonEnabled(button, enabled)
         button.BackgroundColor3 = button:GetAttribute("originalColor") or UI.Colors.ButtonGreen
         button.TextColor3 = UI.Colors.TextWhite
     else
-        if not button:GetAttribute("originalColor") then
-            button:SetAttribute("originalColor", button.BackgroundColor3)
-        end
         button.BackgroundColor3 = UI.Colors.ButtonDisabled
         button.TextColor3 = UI.Colors.TextGray
     end
@@ -210,6 +209,46 @@ function UI.styleButton(button, style)
     else
         button.BackgroundColor3 = UI.Colors.ButtonGray
     end
+end
+
+function UI.createAvatarImage(parent, userId)
+    local avatarSize = UDim2.new(0.8, 0, 0.5, 0)
+    
+    local container = UI.createFrame({
+        name = "AvatarContainer",
+        parent = parent,
+        size = avatarSize,
+        backgroundTransparency = 1,
+    })
+
+    local background = UI.createFrame({
+        name = "AvatarBackground",
+        parent = container,
+        size = UDim2.new(1, 0, 1, 0),
+        position = UDim2.new(0.5, 0, 0.5, 0),
+        backgroundColor = Color3.fromRGB(100, 150, 100),
+        borderSize = 2,
+        borderColor = Color3.fromRGB(150, 200, 150),
+        corner = true,
+        cornerRadius = UDim.new(0.5, 0),
+    })
+    background.AnchorPoint = Vector2.new(0.5, 0.5)
+
+    local aspect = Instance.new("UIAspectRatioConstraint")
+    aspect.AspectRatio = 1
+    aspect.AspectType = Enum.AspectType.FitWithinMaxSize
+    aspect.Parent = background
+
+    local image = Instance.new("ImageLabel")
+    image.Name = "AvatarImage"
+    image.Size = UDim2.new(1, -4, 1, -4)
+    image.Position = UDim2.new(0, 2, 0, 2)
+    image.Image = "rbxthumb://type=AvatarHeadShot&id=" .. userId .. "&w=150&h=150"
+    image.BackgroundTransparency = 1
+    image.Parent = background
+    UI.addCorner(image, UDim.new(0.5, 0))
+    
+    return container
 end
 
 return UI 

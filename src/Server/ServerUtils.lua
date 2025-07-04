@@ -87,14 +87,13 @@ end
 Utils.config = {
     maxPlayers = 4,
     minPlayers = 2,
-    maxRoomNameLength = 50
 }
 
 function Utils.validateRoomName(name)
     if type(name) ~= "string" then
         return false, "Room name must be a string"
     end
-    if #name == 0 or #name > Utils.config.maxRoomNameLength then
+    if #name == 0 then
         return false, "Room name length invalid"
     end
 
