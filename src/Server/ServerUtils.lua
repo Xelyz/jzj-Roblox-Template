@@ -1,8 +1,8 @@
 -- ServerUtils - 简化的服务器端工具模块
 
-local Players = game:GetService("Players")
-
 local Utils = {}
+
+local Players = game:GetService("Players")
 
 -- 验证函数
 function Utils.isValidPlayer(player)

@@ -1,17 +1,17 @@
 -- LeaderboardClient (ModuleScript) - 处理排行榜GUI功能
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LeaderboardClient = {}
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- 等待远程函数
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local GetLeaderboard = Remotes:WaitForChild("GetLeaderboard")
-local GetPlayerRank = Remotes:WaitForChild("GetPlayerRank")
+-- 导入SignalManager
+local SignalManager = require(script.Parent.Parent.SignalManager)
+local UI = require(script.Parent.ClientUIUtils)
 
-local UI = require(game:GetService("StarterPlayer").StarterPlayerScripts:WaitForChild("UIUtils"))
-
-local LeaderboardClient = {}
+-- 远程函数
+local GetLeaderboard = SignalManager.GetRemote("GetLeaderboard")
+local GetPlayerRank = SignalManager.GetRemote("GetPlayerRank")
 
 -- 显示排行榜界面
 function LeaderboardClient.ShowLeaderboard()
@@ -67,7 +67,8 @@ function LeaderboardClient.ShowLeaderboard()
         size = UDim2.new(0.8, 0, 0.5, 0),
         position = UDim2.new(0.1, 0, 0.33, 0),
         listLayout = true,
-        listPadding = UDim.new(0, 2)
+        listPadding = UDim.new(0, 2),
+        cornerRadius = UDim.new(0, 8)
     })
     
     -- 排行榜表头
@@ -103,87 +104,52 @@ function LeaderboardClient.ShowLeaderboard()
     end
     
     -- 创建排行榜条目的函数
-    local function createLeaderboardEntry(parent, index, data)
+    local function createLeaderboardEntry(data, index)
         local entryFrame = UI.createFrame({
             name = "Entry" .. index,
-            parent = parent,
-            size = UDim2.new(1, 0, 0, 35),
+            parent = listFrame,
+            size = UDim2.new(1, 0, 0, 40),
             backgroundColor = index % 2 == 0 and Color3.fromRGB(45, 45, 55) or Color3.fromRGB(40, 40, 50),
             borderSize = 1,
-            borderColor = UI.Colors.Border
+            borderColor = UI.Colors.BorderAccent
         })
         entryFrame.LayoutOrder = index
         
-        -- 排名颜色
-        local rankColor = UI.Colors.TextWhite
-        if index == 1 then
-            rankColor = UI.Colors.TextYellow -- 金色
-        elseif index == 2 then
-            rankColor = Color3.fromRGB(192, 192, 192) -- 银色
-        elseif index == 3 then
-            rankColor = Color3.fromRGB(205, 127, 50) -- 铜色
-        end
-        
         -- 排名
         UI.createLabel({
-            name = "RankLabel",
-            text = "#" .. tostring(index),
+            name = "Rank",
+            text = tostring(index),
             parent = entryFrame,
             size = UDim2.new(0.15, 0, 1, 0),
             position = UDim2.new(0, 0, 0, 0),
-            textSize = 14,
-            textColor = rankColor,
-            font = Enum.Font.SourceSansBold,
-            transparent = true
+            textColor = UI.Colors.TextPrimary,
+            fontSize = 18,
+            fontWeight = Enum.FontWeight.Bold
         })
         
-        -- 玩家名称
+        -- 玩家名
         UI.createLabel({
-            name = "NameLabel",
-            text = data.displayName or data.name or "Unknown",
+            name = "PlayerName",
+            text = data.name,
             parent = entryFrame,
-            size = UDim2.new(0.35, 0, 1, 0),
+            size = UDim2.new(0.6, 0, 1, 0),
             position = UDim2.new(0.15, 0, 0, 0),
-            textSize = 14,
-            textColor = data.userId == LocalPlayer.UserId and UI.Colors.TextGreen or UI.Colors.TextWhite,
-            transparent = true
+            textColor = UI.Colors.TextPrimary,
+            fontSize = 16
         })
         
         -- 胜场数
         UI.createLabel({
-            name = "WinsLabel",
-            text = tostring(data.wins or 0),
+            name = "Wins",
+            text = tostring(data.totalWins),
             parent = entryFrame,
-            size = UDim2.new(0.15, 0, 1, 0),
-            position = UDim2.new(0.5, 0, 0, 0),
-            textSize = 14,
-            textColor = UI.Colors.TextGreen,
-            transparent = true
+            size = UDim2.new(0.25, 0, 1, 0),
+            position = UDim2.new(0.75, 0, 0, 0),
+            textColor = UI.Colors.TextPrimary,
+            fontSize = 16
         })
         
-        -- 总场次
-        UI.createLabel({
-            name = "MatchesLabel",
-            text = tostring(data.totalMatches),
-            parent = entryFrame,
-            size = UDim2.new(0.15, 0, 1, 0),
-            position = UDim2.new(0.65, 0, 0, 0),
-            textSize = 14,
-            textColor = UI.Colors.TextGray,
-            transparent = true
-        })
-        
-        -- 胜率
-        UI.createLabel({
-            name = "RatioLabel",
-            text = string.format("%.1f%%", (data.winRatio or 0) * 100),
-            parent = entryFrame,
-            size = UDim2.new(0.2, 0, 1, 0),
-            position = UDim2.new(0.8, 0, 0, 0),
-            textSize = 14,
-            textColor = UI.Colors.TextYellow,
-            transparent = true
-        })
+        return entryFrame
     end
     
     -- 加载排行榜数据
@@ -194,7 +160,7 @@ function LeaderboardClient.ShowLeaderboard()
         
         if success and leaderboardData then
             for i, playerData in ipairs(leaderboardData) do
-                createLeaderboardEntry(listFrame, i, playerData)
+                createLeaderboardEntry(playerData, i)
             end
             
             -- 更新滚动区域大小
@@ -232,15 +198,13 @@ function LeaderboardClient.ShowLeaderboard()
         size = UDim2.new(0.2, 0, 0.08, 0),
         position = UDim2.new(0.4, 0, 0.88, 0),
         backgroundColor = UI.Colors.ButtonGray,
+        cornerRadius = UDim.new(0, 6),
         onClick = function()
             screenGui:Destroy()
             
             -- 触发关闭事件通知RoomClient
-            local Events = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Client")
-            local LeaderboardClosed = Events:FindFirstChild("LeaderboardClosed")
-            if LeaderboardClosed then
-                LeaderboardClosed:Fire()
-            end
+            local LeaderboardClosed = SignalManager.GetBindable("LeaderboardClosed")
+            LeaderboardClosed:Fire()
         end
     })
     

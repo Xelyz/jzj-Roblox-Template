@@ -1,5 +1,7 @@
 -- DisableMovementServer.server.lua - 服务器端配置StarterPlayer设置
 
+local M = {}
+
 local StarterPlayer = game:GetService("StarterPlayer")
 local Players = game:GetService("Players")
 
@@ -71,4 +73,6 @@ local function setupMovementDisabling()
 end
 
 -- 启动配置
-setupMovementDisabling() 
+setupMovementDisabling()
+
+return M 

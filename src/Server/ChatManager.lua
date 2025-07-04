@@ -1,12 +1,15 @@
+local M = {}
+
 -- ChatManager (Server) - 专门处理游戏内聊天消息
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local MatchMessage = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("MatchMessage")
+-- 导入SignalManager
+local SignalManager = require(script.Parent.Parent.SignalManager)
 
-local MatchService = require(game.ServerScriptService:WaitForChild("MatchService"))
+local MatchMessage = SignalManager.GetRemote("MatchMessage")
+local MatchService = require(script.Parent.MatchService)
 
 -- 处理游戏内聊天消息中继
-MatchMessage.OnServerEvent:Connect(function(sender, data)
+MatchMessage:Connect(function(sender, data)
     -- data = {matchId = ..., message = ...}
     if not data or not data.matchId or not data.message then
         print("Invalid match message data from:", sender.Name)
@@ -31,4 +34,6 @@ MatchMessage.OnServerEvent:Connect(function(sender, data)
     else
         print("Match not found for message relay:", data.matchId)
     end
-end) 
+end)
+
+return M 

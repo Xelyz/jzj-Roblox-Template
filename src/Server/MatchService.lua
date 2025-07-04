@@ -1,8 +1,8 @@
 -- MatchService: Shared match state for server scripts
 
-local Utils = require(game.ServerScriptService:WaitForChild("ServerUtils"))
-
 local MatchService = {}
+
+local Utils = require(script.Parent.ServerUtils)
 
 -- [matchId] = {players = {player1, player2, ...}, state = {}}
 MatchService.activeGames = {}

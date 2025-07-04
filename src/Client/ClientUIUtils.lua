@@ -117,12 +117,15 @@ function UI.createButton(config)
     button.TextColor3 = config.textColor or UI.Colors.TextWhite
     button.Font = config.font or Enum.Font.SourceSansBold
     button.BackgroundColor3 = config.backgroundColor or UI.Colors.ButtonGray
-    button.BorderSizePixel = 0
+    button.BorderSizePixel = config.borderSize or 0
+    button.BorderColor3 = config.borderColor or UI.Colors.Border
     button.Parent = config.parent
     
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = button
+    if config.cornerRadius ~= false then
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = config.cornerRadius or UDim.new(0, 8)
+        corner.Parent = button
+    end
     
     if config.onClick then
         button.MouseButton1Click:Connect(config.onClick)
@@ -144,9 +147,11 @@ function UI.createScrollingFrame(config)
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     scrollFrame.Parent = config.parent
     
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = scrollFrame
+    if config.cornerRadius ~= false then
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = config.cornerRadius or UDim.new(0, 10)
+        corner.Parent = scrollFrame
+    end
     
     if config.listLayout then
         local layout = Instance.new("UIListLayout")

@@ -1,23 +1,26 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- RoomClient - 房间系统客户端模块
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- 等待远程事件
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local RoomCreateRequest = Remotes:WaitForChild("RoomCreateRequest")
-local RoomJoinRequest = Remotes:WaitForChild("RoomJoinRequest")
-local RoomLeaveRequest = Remotes:WaitForChild("RoomLeaveRequest")
-local RoomStartGame = Remotes:WaitForChild("RoomStartGame")
-local RoomPlayerUpdate = Remotes:WaitForChild("RoomPlayerUpdate")
-local RoomPlayerReady = Remotes:WaitForChild("RoomPlayerReady")
-local GetRoomList = Remotes:WaitForChild("GetRoomList")
-local MatchStarted = Remotes:WaitForChild("MatchStarted")
-local GameFinished = Remotes:WaitForChild("GameFinished")
+-- 导入SignalManager
+local SignalManager = require(script.Parent.SignalManager)
+
+-- 远程事件
+local RoomCreateRequest = SignalManager.GetRemote("RoomCreateRequest")
+local RoomJoinRequest = SignalManager.GetRemote("RoomJoinRequest")
+local RoomLeaveRequest = SignalManager.GetRemote("RoomLeaveRequest")
+local RoomStartGame = SignalManager.GetRemote("RoomStartGame")
+local RoomPlayerUpdate = SignalManager.GetRemote("RoomPlayerUpdate")
+local RoomPlayerReady = SignalManager.GetRemote("RoomPlayerReady")
+local GetRoomList = SignalManager.GetRemote("GetRoomList")
+local MatchStarted = SignalManager.GetRemote("MatchStarted")
+local GameFinished = SignalManager.GetRemote("GameFinished")
 -- GetLeaderboard 和 GetPlayerRank 已移到 LeaderboardClient 模块中
 
-local ClientMatchState = require(game:GetService("StarterPlayer").StarterPlayerScripts:WaitForChild("ClientMatchState"))
-local LeaderboardClient = require(game:GetService("StarterPlayer").StarterPlayerScripts:WaitForChild("LeaderboardClient"))
-local UI = require(game:GetService("StarterPlayer").StarterPlayerScripts:WaitForChild("UIUtils"))
+local ClientMatchState = require(script.Parent.MatchStateClient)
+local LeaderboardClient = require(script.Parent.LeaderboardClient)
+local UI = require(script.Parent.ClientUIUtils)
 
 -- UI状态管理
 local currentUI = nil
@@ -96,6 +99,7 @@ local function createMainMenu()
             position = UDim2.new(0.1, 0, 0.15, 0),
             size = UDim2.new(0.8, 0, 0.2, 0),
             backgroundColor = UI.Colors.ButtonGreen,
+            cornerRadius = UDim.new(0, 8),
             onClick = function()
                 local roomName = LocalPlayer.DisplayName .. "'s room"
                 print("Creating room with name:", roomName)
@@ -108,6 +112,7 @@ local function createMainMenu()
             position = UDim2.new(0.1, 0, 0.4, 0),
             size = UDim2.new(0.8, 0, 0.2, 0),
             backgroundColor = UI.Colors.ButtonBlue,
+            cornerRadius = UDim.new(0, 8),
             onClick = function()
                 showRoomList()
             end
@@ -118,6 +123,7 @@ local function createMainMenu()
             position = UDim2.new(0.1, 0, 0.65, 0),
             size = UDim2.new(0.8, 0, 0.2, 0),
             backgroundColor = UI.Colors.ButtonGray,
+            cornerRadius = UDim.new(0, 8),
             onClick = function()
                 showLeaderboard()
             end
@@ -150,7 +156,8 @@ function showRoomList()
         parent = backgroundFrame,
         size = UDim2.new(0.8, 0, 0.6, 0),
         position = UDim2.new(0.1, 0, 0.2, 0),
-        listLayout = true
+        listLayout = true,
+        cornerRadius = UDim.new(0, 8)
     })
     
     -- 创建房间列表项
@@ -232,7 +239,8 @@ function showRoomList()
             parent = roomItem,
             size = UDim2.new(0.18, 0, 0.6, 0),
             position = UDim2.new(0.8, 0, 0.2, 0),
-            textSize = 16
+            textSize = 16,
+            cornerRadius = UDim.new(0, 6)
         }
         
         if roomData.canJoin == false then
@@ -295,6 +303,7 @@ function showRoomList()
             position = UDim2.new(0.1, 0, 0.85, 0),
             size = UDim2.new(0.2, 0, 0.08, 0),
             backgroundColor = UI.Colors.ButtonGray,
+            cornerRadius = UDim.new(0, 6),
             onClick = function() createMainMenu() end
         },
         {
@@ -303,6 +312,7 @@ function showRoomList()
             position = UDim2.new(0.7, 0, 0.85, 0),
             size = UDim2.new(0.2, 0, 0.08, 0),
             backgroundColor = UI.Colors.ButtonGreen,
+            cornerRadius = UDim.new(0, 6),
             onClick = function() loadRoomList() end
         }
     }
@@ -428,6 +438,7 @@ function showRoomInterface(roomData)
             size = UDim2.new(0.25, 0, 0.8, 0),
             position = UDim2.new(0, 0, 0.1, 0),
             backgroundColor = UI.Colors.ButtonRed,
+            cornerRadius = UDim.new(0, 6),
             onClick = function()
                 print("Leaving room")
                 RoomLeaveRequest:FireServer()
@@ -440,6 +451,7 @@ function showRoomInterface(roomData)
             size = UDim2.new(0.3, 0, 0.8, 0),
             position = UDim2.new(0.7, 0, 0.1, 0),
             backgroundColor = UI.Colors.ButtonGreen,
+            cornerRadius = UDim.new(0, 6),
             onClick = function()
                 if currentRoomData and currentRoomData.host and currentRoomData.host.userId == LocalPlayer.UserId then
                     print("Starting game")
@@ -453,6 +465,7 @@ function showRoomInterface(roomData)
             size = UDim2.new(0.3, 0, 0.8, 0),
             position = UDim2.new(0.35, 0, 0.1, 0),
             backgroundColor = UI.Colors.ButtonGreen,
+            cornerRadius = UDim.new(0, 6),
             onClick = function()
                 print("Toggling ready status from room interface")
                 RoomPlayerReady:FireServer()
@@ -546,7 +559,7 @@ function showRoomInterface(roomData)
 end
 
 -- 监听房间玩家更新事件
-RoomPlayerUpdate.OnClientEvent:Connect(function(roomData)
+RoomPlayerUpdate:Connect(function(roomData)
     print("Room player update received:", roomData)
     
     if currentUI and currentUI.Name == "RoomInterfaceGui" then
@@ -633,7 +646,7 @@ RoomPlayerUpdate.OnClientEvent:Connect(function(roomData)
 end)
 
 -- 监听比赛开始事件
-MatchStarted.OnClientEvent:Connect(function(data)
+MatchStarted:Connect(function(data)
     print("MatchStarted event received:", data)
     
     if not data then
@@ -656,22 +669,15 @@ MatchStarted.OnClientEvent:Connect(function(data)
 end)
 
 -- 监听排行榜关闭事件
-local Events = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Client")
--- 先确保LeaderboardClosed事件存在
-local LeaderboardClosed = Events:FindFirstChild("LeaderboardClosed")
-if not LeaderboardClosed then
-    LeaderboardClosed = Instance.new("BindableEvent")
-    LeaderboardClosed.Name = "LeaderboardClosed"
-    LeaderboardClosed.Parent = Events
-end
+local LeaderboardClosed = SignalManager.GetBindable("LeaderboardClosed")
 -- 直接连接事件监听器
-LeaderboardClosed.Event:Connect(function()
+LeaderboardClosed:Connect(function()
     print("Leaderboard closed, returning to main menu")
     createMainMenu()
 end)
 
 -- 监听游戏结束事件
-GameFinished.OnClientEvent:Connect(function(data)
+GameFinished:Connect(function(data)
     print("Game finished event received:", data)
     
     if data.type == "return_to_room" and data.roomData then

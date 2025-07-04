@@ -1,19 +1,23 @@
 -- GameManagerTemplate (Server) - 通用游戏管理器模板
 -- 此文件为游戏逻辑的基础模板，可根据具体游戏需求进行修改
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local MatchService = require(game.ServerScriptService:WaitForChild("MatchService"))
-local LeaderboardService = require(game.ServerScriptService:WaitForChild("LeaderboardService"))
 
-local PlayerInput = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PlayerInput")
-local RoundResult = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundResult")
-local GameStateUpdate = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("GameStateUpdate")
-local GameAborted = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("GameAborted")
-local GameFinished = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("GameFinished")
+-- 导入SignalManager
+local SignalManager = require(script.Parent.SignalManager)
 
-local Events = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Server")
-local GameInitRequest = Events:WaitForChild("GameInitRequest")
+local MatchService = require(script.Parent.MatchServiceServer)
+local LeaderboardService = require(script.Parent.LeaderboardServiceServer)
+
+-- 远程事件
+local PlayerInput = SignalManager.GetRemote("PlayerInput")
+local RoundResult = SignalManager.GetRemote("RoundResult")
+local GameStateUpdate = SignalManager.GetRemote("GameStateUpdate")
+local GameAborted = SignalManager.GetRemote("GameAborted")
+local GameFinished = SignalManager.GetRemote("GameFinished")
+
+-- 本地事件
+local GameInitRequest = SignalManager.GetBindable("GameInitRequest")
 
 -- 游戏配置 - 根据具体游戏调整
 local GAME_CONFIG = {
@@ -170,7 +174,7 @@ function broadcastGameState(match, matchId)
 end
 
 -- 处理玩家输入
-PlayerInput.OnServerEvent:Connect(function(player, data)
+PlayerInput:Connect(function(player, data)
     -- data = {matchId = ..., input = {type = ..., data = ...}}
     if not data or not data.matchId or not data.input then
         print("Invalid player input data from:", player.Name)
@@ -250,7 +254,7 @@ local function initializeMatchGameState(matchId)
 end
 
 -- 监听游戏初始化请求事件
-GameInitRequest.Event:Connect(function(matchId)
+GameInitRequest:Connect(function(matchId)
     initializeMatchGameState(matchId)
 end)
 

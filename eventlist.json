@@ -1,0 +1,22 @@
+[
+  {"name": "GetLeaderboard", "type": "Remote"},
+  {"name": "GetPlayerRank", "type": "Remote"},
+  {"name": "PlayerInput", "type": "Remote"},
+  {"name": "GameStateUpdate", "type": "Remote"},
+  {"name": "GameAborted", "type": "Remote"},
+  {"name": "MatchMessage", "type": "Remote"},
+  {"name": "GameGuiCreated", "type": "Bindable"},
+  {"name": "MatchStarted", "type": "Remote"},
+  {"name": "RoomCreateRequest", "type": "Remote"},
+  {"name": "RoomJoinRequest", "type": "Remote"},
+  {"name": "RoomLeaveRequest", "type": "Remote"},
+  {"name": "RoomStartGame", "type": "Remote"},
+  {"name": "RoomPlayerUpdate", "type": "Remote"},
+  {"name": "GetRoomList", "type": "Remote"},
+  {"name": "GameFinished", "type": "Remote"},
+  {"name": "ReturnToRoomRequest", "type": "Remote"},
+  {"name": "RoomPlayerReady", "type": "Remote"},
+  {"name": "GameInitRequest", "type": "Bindable"},
+  {"name": "RoundResult", "type": "Remote"},
+  {"name": "LeaderboardClosed", "type": "Bindable"}
+] 

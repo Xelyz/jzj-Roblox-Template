@@ -1,23 +1,23 @@
 -- GameClientTemplate (Client) - 通用游戏客户端模板
 -- 此文件为游戏UI和客户端逻辑的基础模板，可根据具体游戏需求进行修改
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
+-- 导入SignalManager
+local SignalManager = require(script.Parent.SignalManager)
+
 -- 远程事件
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local PlayerInput = Remotes:WaitForChild("PlayerInput")
-local GameStateUpdate = Remotes:WaitForChild("GameStateUpdate")
-local GameAborted = Remotes:WaitForChild("GameAborted")
-local MatchMessage = Remotes:WaitForChild("MatchMessage")
+local PlayerInput = SignalManager.GetRemote("PlayerInput")
+local GameStateUpdate = SignalManager.GetRemote("GameStateUpdate")
+local GameAborted = SignalManager.GetRemote("GameAborted")
+local MatchMessage = SignalManager.GetRemote("MatchMessage")
 
--- 客户端事件
-local Events = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Client")
-local GameGuiCreated = Events:WaitForChild("GameGuiCreated")
+-- 本地事件
+local GameGuiCreated = SignalManager.GetBindable("GameGuiCreated")
 
-local ClientMatchState = require(game:GetService("StarterPlayer").StarterPlayerScripts:WaitForChild("ClientMatchState"))
-local UI = require(game:GetService("StarterPlayer").StarterPlayerScripts:WaitForChild("UIUtils"))
+local ClientMatchState = require(script.Parent.MatchStateClient)
+local UI = require(script.Parent.ClientUIUtils)
 
 -- 全局变量
 local gameGui = nil
@@ -170,7 +170,7 @@ local function createGameGui()
     })
     
     -- 创建对手列表容器
-    local opponentsContainer = UI.createScrollingFrame({
+    UI.createScrollingFrame({
         name = "OpponentsContainer",
         parent = playersFrame,
         size = UDim2.new(0.45, 0, 0.8, 0),
@@ -379,7 +379,7 @@ local function showGameEndUI()
 end
 
 -- 监听比赛开始事件 - 在MatchStarted事件后自动创建GUI
-local MatchStarted = Remotes:WaitForChild("MatchStarted")
+local MatchStarted = SignalManager.GetRemote("MatchStarted")
 MatchStarted.OnClientEvent:Connect(function(data)
     print("MatchStarted received in GameClient, creating game GUI")
     createGameGui()

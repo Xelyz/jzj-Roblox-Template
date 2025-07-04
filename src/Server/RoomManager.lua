@@ -1,27 +1,28 @@
 -- RoomManager - 房间管理器
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- 导入SignalManager
+local SignalManager = require(script.Parent.Parent.SignalManager)
 
 -- 远程事件
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local RoomCreateRequest = Remotes:WaitForChild("RoomCreateRequest")
-local RoomJoinRequest = Remotes:WaitForChild("RoomJoinRequest")
-local RoomLeaveRequest = Remotes:WaitForChild("RoomLeaveRequest")
-local RoomStartGame = Remotes:WaitForChild("RoomStartGame")
-local RoomPlayerUpdate = Remotes:WaitForChild("RoomPlayerUpdate")
-local GetRoomList = Remotes:WaitForChild("GetRoomList")
-local MatchStarted = Remotes:WaitForChild("MatchStarted")
-local GameAborted = Remotes:WaitForChild("GameAborted")
-local GameFinished = Remotes:WaitForChild("GameFinished")
-local ReturnToRoomRequest = Remotes:WaitForChild("ReturnToRoomRequest")
-local RoomPlayerReady = Remotes:WaitForChild("RoomPlayerReady")
+local RoomCreateRequest = SignalManager.GetRemote("RoomCreateRequest")
+local RoomJoinRequest = SignalManager.GetRemote("RoomJoinRequest")
+local RoomLeaveRequest = SignalManager.GetRemote("RoomLeaveRequest")
+local RoomStartGame = SignalManager.GetRemote("RoomStartGame")
+local RoomPlayerUpdate = SignalManager.GetRemote("RoomPlayerUpdate")
+local GetRoomList = SignalManager.GetRemote("GetRoomList")
+local MatchStarted = SignalManager.GetRemote("MatchStarted")
+local GameAborted = SignalManager.GetRemote("GameAborted")
+local GameFinished = SignalManager.GetRemote("GameFinished")
+local ReturnToRoomRequest = SignalManager.GetRemote("ReturnToRoomRequest")
+local RoomPlayerReady = SignalManager.GetRemote("RoomPlayerReady")
 
-local Events = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Server")
-local GameInitRequest = Events:WaitForChild("GameInitRequest")
+-- 本地事件
+local GameInitRequest = SignalManager.GetBindable("GameInitRequest")
 
-local MatchService = require(game.ServerScriptService:WaitForChild("MatchService"))
-local Utils = require(game.ServerScriptService:WaitForChild("ServerUtils"))
+local Utils = require(script.Parent.ServerUtils)
+local MatchService = require(script.Parent.MatchService)
 
 -- 数据
 local rooms = {}
@@ -165,7 +166,7 @@ local function isRoomRestored(player)
 end
 
 -- 事件处理
-RoomCreateRequest.OnServerEvent:Connect(function(player, roomName)
+RoomCreateRequest:Connect(function(player, roomName)
     if not Utils.isValidPlayer(player) then return end
     
     local isValid, error = Utils.validateRoomName(roomName)
@@ -187,7 +188,7 @@ RoomCreateRequest.OnServerEvent:Connect(function(player, roomName)
     broadcastRoomUpdate(room.id)
 end)
 
-RoomJoinRequest.OnServerEvent:Connect(function(player, roomId)
+RoomJoinRequest:Connect(function(player, roomId)
     if not Utils.isValidPlayer(player) or not Utils.isValidId(roomId) then return end
     
     local room = rooms[roomId]
@@ -223,12 +224,26 @@ RoomJoinRequest.OnServerEvent:Connect(function(player, roomId)
     broadcastRoomUpdate(roomId)
 end)
 
-RoomLeaveRequest.OnServerEvent:Connect(function(player)
+RoomLeaveRequest:Connect(function(player)
     if not Utils.isValidPlayer(player) then return end
+    
+    local roomId = playerToRoom[player]
+    if not roomId then
+        Utils.log("RoomManager", player.Name .. " tried to leave a room but was not in one.")
+        return
+    end
+    
+    local match = MatchService.GetMatchByRoomId(roomId)
+    if match and match:IsPlayerInMatch(player) then
+        Utils.log("RoomManager", "Player ".. player.Name .." cannot leave room during an active match.")
+        -- 可以选择向客户端发送一个错误提示
+        return
+    end
+    
     removePlayerFromRoom(player)
 end)
 
-RoomPlayerReady.OnServerEvent:Connect(function(player)
+RoomPlayerReady:Connect(function(player)
     if not Utils.isValidPlayer(player) then return end
     
     local roomId = playerToRoom[player]
@@ -255,7 +270,7 @@ RoomPlayerReady.OnServerEvent:Connect(function(player)
     broadcastRoomUpdate(roomId)
 end)
 
-RoomStartGame.OnServerEvent:Connect(function(player, roomId)
+RoomStartGame:Connect(function(player, roomId)
     if not Utils.isValidPlayer(player) or not Utils.isValidId(roomId) then return end
     
     local room = rooms[roomId]
@@ -371,7 +386,7 @@ GetRoomList.OnServerInvoke = function(player)
     return roomList
 end
 
-ReturnToRoomRequest.OnServerEvent:Connect(function(player)
+ReturnToRoomRequest:Connect(function(player)
     if not Utils.isValidPlayer(player) then return end
     
     if isRoomRestored(player) then
