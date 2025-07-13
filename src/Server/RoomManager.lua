@@ -15,12 +15,12 @@ local RoomPlayerUpdate = SignalManager.GetRemote("RoomPlayerUpdate")
 local GetRoomList = SignalManager.GetRemoteFunction("GetRoomList")
 local MatchStarted = SignalManager.GetRemote("MatchStarted")
 local GameAborted = SignalManager.GetRemote("GameAborted")
-local GameFinished = SignalManager.GetRemote("GameFinished")
 local ReturnToRoomRequest = SignalManager.GetRemote("ReturnToRoomRequest")
 local RoomPlayerReady = SignalManager.GetRemote("RoomPlayerReady")
 
 -- 本地事件
 local GameInitRequest = SignalManager.GetBindable("GameInitRequest")
+local GameFinishedNotification = SignalManager.GetBindable("GameFinishedNotification")
 
 local Utils = require(script.Parent.ServerUtils)
 local MatchService = require(script.Parent.MatchService)
@@ -136,7 +136,8 @@ local function findRoomByMatchId(matchId)
     return nil, nil
 end
 
-local function restoreRoomAfterGame(matchId, player)
+-- 恢复房间状态，但不立即推送界面更新
+local function restoreRoomAfterGame(matchId)
     local roomId, room = findRoomByMatchId(matchId)
     if not roomId or not room then
         Utils.warn("RoomManager", "Room not found for match", matchId)
@@ -147,14 +148,10 @@ local function restoreRoomAfterGame(matchId, player)
     room.matchId = nil
     room.playerReadyStatus = {}
     
-    Utils.log("RoomManager", "Room restored", roomId)
+    Utils.log("RoomManager", "Room restored for all players (state only)", roomId)
     
-    if Utils.isValidPlayer(player) then
-        GameFinished:FireClient(player, {
-            type = "return_to_room",
-            roomData = getRoomData(room)
-        })
-    end
+    -- 不立即推送界面更新，等待玩家主动请求
+    -- 玩家在服务器端已经回到房间，但界面还在游戏结束页面
     
     return true
 end
@@ -365,40 +362,66 @@ end)
 ReturnToRoomRequest:Connect(function(player)
     if not Utils.isValidPlayer(player) then return end
     
+    Utils.log("RoomManager", "ReturnToRoomRequest received", player.Name)
+    
+    -- 检查玩家是否在已恢复的房间中
     if isRoomRestored(player) then
         local roomId = playerToRoom[player]
         local room = rooms[roomId]
         
         if room then
-            GameFinished:FireClient(player, {
+            Utils.log("RoomManager", "Player found in restored room", player.Name)
+            ReturnToRoomRequest:FireClient(player, {
                 type = "return_to_room",
                 roomData = getRoomData(room)
             })
         else
-            GameFinished:FireClient(player, {
+            Utils.warn("RoomManager", "Player room not found", player.Name)
+            ReturnToRoomRequest:FireClient(player, {
                 type = "return_to_main",
-                message = "房间已不存在"
+                message = "room does not exist"
             })
         end
         return
     end
     
-    local matchId, _match = MatchService.GetMatchByPlayer(player)
-    if not matchId then
-        local roomData = if isRoomRestored(player) then getRoomData(rooms[playerToRoom[player]]) else nil
-        GameFinished:FireClient(player, {
-            type = if roomData then "return_to_room" else "return_to_main",
-            roomData = roomData,
-            message = if roomData then nil else "无法找到对应的房间"
-        })
+    -- 检查玩家是否仍在房间中（备用方案）
+    local roomId = playerToRoom[player]
+    if roomId then
+        local room = rooms[roomId]
+        if room and not room.isGameStarted then
+            Utils.log("RoomManager", "Player found in room via backup method", player.Name)
+            ReturnToRoomRequest:FireClient(player, {
+                type = "return_to_room",
+                roomData = getRoomData(room)
+            })
+            return
+        end
+    end
+    
+    -- 如果到这里，说明房间恢复机制可能有问题
+    Utils.warn("RoomManager", "Room recovery failed for player", player.Name)
+    ReturnToRoomRequest:FireClient(player, {
+        type = "return_to_main",
+        message = "failed to find room"
+    })
+end)
+
+-- 监听游戏结束通知
+GameFinishedNotification:Connect(function(data)
+    if not data or not data.matchId then
+        Utils.warn("RoomManager", "Invalid game finished notification")
         return
     end
     
-    if not restoreRoomAfterGame(matchId, player) then
-        GameFinished:FireClient(player, {
-            type = "return_to_main",
-            message = "房间已不存在"
-        })
+    local matchId = data.matchId
+    Utils.log("RoomManager", "Game finished notification received", matchId)
+    
+    -- 立即恢复房间状态
+    if restoreRoomAfterGame(matchId) then
+        Utils.log("RoomManager", "Room restored successfully after game", matchId)
+    else
+        Utils.warn("RoomManager", "Failed to restore room after game", matchId)
     end
 end)
 

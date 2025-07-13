@@ -16,7 +16,8 @@ local RoomPlayerUpdate = SignalManager.GetRemote("RoomPlayerUpdate")
 local RoomPlayerReady = SignalManager.GetRemote("RoomPlayerReady")
 local GetRoomList = SignalManager.GetRemoteFunction("GetRoomList")
 local MatchStarted = SignalManager.GetRemote("MatchStarted")
-local GameFinished = SignalManager.GetRemote("GameFinished")
+local ReturnToRoomRequest = SignalManager.GetRemote("ReturnToRoomRequest")
+-- GameFinished功能已合并到ReturnToRoomRequest中
 -- GetLeaderboard 和 GetPlayerRank 已移到 LeaderboardClient 模块中
 
 local ClientMatchState = require(script.Parent.MatchStateClient)
@@ -696,9 +697,9 @@ LeaderboardClosed:Connect(function()
     createMainMenu()
 end)
 
--- 监听游戏结束事件
-GameFinished:Connect(function(data)
-    print("Game finished event received:", data)
+-- 监听返回房间响应事件
+ReturnToRoomRequest:Connect(function(data)
+    print("Return to room response received:", data)
     
     if data.type == "return_to_room" and data.roomData then
         print("Returning to room after game:", data.roomData.name)
@@ -706,15 +707,23 @@ GameFinished:Connect(function(data)
         showRoomInterface(data.roomData)
     elseif data.type == "return_to_main" then
         print("Returning to main menu:", data.message or "Game finished")
+        -- 立即创建主菜单，避免GUI空档期
+        createMainMenu()
+        
+        -- 如果有错误消息，异步显示并清理
         if data.message then
-            -- 显示消息
             local msg = Instance.new("Message")
             msg.Text = data.message
             msg.Parent = LocalPlayer.PlayerGui
-            task.wait(2)
-            msg:Destroy()
+            
+            -- 异步清理消息，不阻塞主线程
+            task.spawn(function()
+                task.wait(2)
+                if msg and msg.Parent then
+                    msg:Destroy()
+                end
+            end)
         end
-        createMainMenu()
     else
         print("Game finished, returning to main menu")
         createMainMenu()

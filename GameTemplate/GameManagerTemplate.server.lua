@@ -14,7 +14,7 @@ local PlayerInput = SignalManager.GetRemote("PlayerInput")
 local RoundResult = SignalManager.GetRemote("RoundResult")
 local GameStateUpdate = SignalManager.GetRemote("GameStateUpdate")
 local GameAborted = SignalManager.GetRemote("GameAborted")
-local GameFinished = SignalManager.GetRemote("GameFinished")
+-- GameFinished功能已合并到ReturnToRoomRequest中
 
 -- 本地事件
 local GameInitRequest = SignalManager.GetBindable("GameInitRequest")
