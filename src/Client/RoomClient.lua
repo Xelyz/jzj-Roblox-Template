@@ -68,19 +68,19 @@ local function createMainMenu()
         textScaled = true
     })
     
-    -- 副标题
-    UI.createLabel({
-        name = "SubtitleLabel",
-        text = "Simplest? Game Ever",
-        parent = backgroundFrame,
-        size = UDim2.new(0.6, 0, 0.08, 0),
-        position = UDim2.new(0.2, 0, 0.3, 0),
-        textSize = 20,
-        textColor = UI.Colors.TextGray,
-        transparent = true,
-        textWrapped = true,
-        textScaled = true
-    })
+    -- -- 副标题
+    -- UI.createLabel({
+    --     name = "SubtitleLabel",
+    --     text = "Simplest? Game Ever",
+    --     parent = backgroundFrame,
+    --     size = UDim2.new(0.6, 0, 0.08, 0),
+    --     position = UDim2.new(0.2, 0, 0.3, 0),
+    --     textSize = 20,
+    --     textColor = UI.Colors.TextGray,
+    --     transparent = true,
+    --     textWrapped = true,
+    --     textScaled = true
+    -- })
     
     -- 中央面板
     local centerPanel = UI.createFrame({
@@ -274,7 +274,7 @@ function showRoomList()
     local function refreshRoomList()
         -- 清空现有列表
         for _, child in ipairs(listFrame:GetChildren()) do
-            if child:IsA("Frame") then
+            if child:IsA("Frame") or child.Name == "NoRoomsLabel" or child.Name == "ErrorLabel" then
                 child:Destroy()
             end
         end
