@@ -24,6 +24,7 @@ local GameFinishedNotification = SignalManager.GetBindable("GameFinishedNotifica
 
 local Utils = require(script.Parent.ServerUtils)
 local MatchService = require(script.Parent.MatchService)
+local Config = require(script.Parent.Parent.Config)
 
 -- 数据
 local rooms = {}
@@ -68,7 +69,7 @@ local function getRoomData(room)
         id = room.id,
         name = room.name,
         playerCount = #playerData,
-        maxPlayers = Utils.config.maxPlayers,
+        maxPlayers = Config.game.maxPlayers,
         players = playerData,
         host = room.host and {
             name = room.host.Name,
@@ -195,7 +196,7 @@ RoomJoinRequest:Connect(function(player, roomId)
         return
     end
     
-    if #room.players >= Utils.config.maxPlayers then
+    if #room.players >= Config.game.maxPlayers then
         Utils.warn("RoomManager", "Room full", roomId)
         return
     end
@@ -286,7 +287,7 @@ RoomStartGame:Connect(function(player, roomId)
         return
     end
     
-    if #room.players < Utils.config.minPlayers then
+    if #room.players < Config.game.minPlayers then
         Utils.warn("RoomManager", "Not enough players", #room.players)
         return
     end
@@ -307,7 +308,7 @@ RoomStartGame:Connect(function(player, roomId)
         end
     end
     
-    if #validPlayers < Utils.config.minPlayers then
+    if #validPlayers < Config.game.minPlayers then
         Utils.warn("RoomManager", "Not enough valid players", #validPlayers)
         return
     end

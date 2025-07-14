@@ -9,6 +9,9 @@ local M = {}
 
 if RunService:IsServer() then
     print("Initializing server modules...")
+    -- Core configuration - must be loaded first
+    M.Config = require(script.Config)
+    
     -- Services that are dependencies for other modules
     M.ServerUtils = require(script.Server.ServerUtils)
     M.SignalManager = require(script.SignalManager)
@@ -25,6 +28,9 @@ if RunService:IsServer() then
 
 elseif RunService:IsClient() then
     print("Initializing client modules...")
+    -- Core configuration - must be loaded first
+    M.Config = require(script.Config)
+    
     -- Core modules needed by other client scripts
     M.UI = require(script.Client.ClientUIUtils)
     M.SignalManager = require(script.SignalManager)

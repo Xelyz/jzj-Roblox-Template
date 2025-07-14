@@ -8,6 +8,7 @@ local SignalManager = require(script.Parent.SignalManager)
 
 local MatchService = require(script.Parent.MatchServiceServer)
 local LeaderboardService = require(script.Parent.LeaderboardServiceServer)
+local Config = require(script.Parent.src.Config)
 
 -- 远程事件
 local PlayerInput = SignalManager.GetRemote("PlayerInput")
@@ -19,13 +20,9 @@ local GameAborted = SignalManager.GetRemote("GameAborted")
 -- 本地事件
 local GameInitRequest = SignalManager.GetBindable("GameInitRequest")
 
--- 游戏配置 - 根据具体游戏调整
-local GAME_CONFIG = {
-    MAX_ROUNDS = 10,        -- 最大回合数
-    WIN_CONDITION = 5,      -- 获胜条件
-    STARTING_POINTS = 30,   -- 起始点数（如果游戏需要）
-    ROUND_TIMEOUT = 30      -- 回合超时时间（秒）
-}
+-- 游戏配置现在从Config.game中获取
+-- 如果需要临时的游戏特定配置，可以在这里定义
+-- 但建议将配置放到Config.game中以便外部调整
 
 -- 游戏状态初始化模板
 local function initGameState(players)
@@ -100,7 +97,7 @@ function _processRoundResult(matchId, match)
         end
     end
     
-    if maxWins >= GAME_CONFIG.WIN_CONDITION or gameState.round > GAME_CONFIG.MAX_ROUNDS then
+    if maxWins >= Config.game.winCondition or gameState.round > Config.game.maxRounds then
         gameState.active = false
     end
     

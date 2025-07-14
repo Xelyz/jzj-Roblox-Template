@@ -3,6 +3,7 @@
 local Utils = {}
 
 local Players = game:GetService("Players")
+local Config = require(script.Parent.Parent.Config)
 
 -- 验证函数
 function Utils.isValidPlayer(player)
@@ -83,17 +84,13 @@ function Utils.generateId(prefix)
     return prefix .. "_" .. os.time() .. "_" .. math.random(1000, 9999)
 end
 
--- 配置
-Utils.config = {
-    maxPlayers = 4,
-    minPlayers = 2,
-}
+-- 配置从外部Config模块获取
 
 function Utils.validateRoomName(name)
     if type(name) ~= "string" then
         return false, "Room name must be a string"
     end
-    if #name == 0 then
+    if #name < Config.room.nameMinLength or #name > Config.room.nameMaxLength then
         return false, "Room name length invalid"
     end
 
@@ -102,7 +99,7 @@ end
 
 -- 游戏逻辑
 function Utils.shouldAbortGame(remainingPlayerCount, minRequired)
-    return remainingPlayerCount < (minRequired or Utils.config.minPlayers)
+    return remainingPlayerCount < (minRequired or Config.game.minPlayers)
 end
 
 function Utils.canStartGame(room)
@@ -110,7 +107,7 @@ function Utils.canStartGame(room)
         return false, "Invalid room"
     end
     
-    if #room.players < Utils.config.minPlayers then
+    if #room.players < Config.game.minPlayers then
         return false, "Not enough players"
     end
     

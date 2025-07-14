@@ -23,6 +23,7 @@ local ReturnToRoomRequest = SignalManager.GetRemote("ReturnToRoomRequest")
 local ClientMatchState = require(script.Parent.MatchStateClient)
 local LeaderboardClient = require(script.Parent.LeaderboardClient)
 local UI = require(script.Parent.ClientUIUtils)
+local Config = require(script.Parent.Parent.Config)
 
 -- UI状态管理
 local currentUI = nil
@@ -521,7 +522,7 @@ function showRoomInterface(roomData)
         
         if startButton then
             local isHost = roomData.host and roomData.host.userId == LocalPlayer.UserId
-            local hasEnoughPlayers = #roomData.players >= 2
+            local hasEnoughPlayers = #roomData.players >= Config.game.minPlayers
             
             -- 检查所有非房主玩家是否都已准备
             local allPlayersReady = true
@@ -544,7 +545,7 @@ function showRoomInterface(roomData)
             
             if isHost then
                 if not hasEnoughPlayers then
-                    startButton.Text = string.format("Need %d players", 2)
+                    startButton.Text = string.format("Need %d players", Config.game.minPlayers)
                 elseif not allPlayersReady then
                     startButton.Text = string.format("Waiting for %d players to be ready", notReadyCount)
                 else

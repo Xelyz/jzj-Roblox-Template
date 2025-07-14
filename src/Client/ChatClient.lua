@@ -6,6 +6,7 @@ local LocalPlayer = Players.LocalPlayer
 -- 导入SignalManager和工具模块
 local SignalManager = require(script.Parent.Parent.SignalManager)
 local UI = require(script.Parent.ClientUIUtils)
+local Config = require(script.Parent.Parent.Config)
 
 local MatchMessage = SignalManager.GetRemote("MatchMessage")
 local ClientMatchState = require(script.Parent.MatchStateClient)
@@ -18,7 +19,7 @@ local pendingMessages = {}
 -- 添加消息到聊天显示区域
 local function addMessageToChat(sender, message, container)
     local messageCount = #container:GetChildren()
-    local messageHeight = 30
+    local messageHeight = Config.ui.messageHeight
     
     local messageFrame = UI.createFrame({
         name = "MessageFrame",
