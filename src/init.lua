@@ -37,6 +37,7 @@ elseif RunService:IsClient() then
     M.MatchStateClient = require(script.Client.MatchStateClient)
 
     -- UI and logic modules
+    require(script.Client.BackgroundManager)
     require(script.Client.RoomClient)
     require(script.Client.ChatClient)
     require(script.Client.DisableMovementClient)
