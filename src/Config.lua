@@ -4,6 +4,7 @@
 local Config = {
     game = {
         -- 通用游戏配置
+        name = "Default",
         maxPlayers = 4,
         minPlayers = 2,
         -- 游戏特定配置不在默认配置中，允许外部配置自定义

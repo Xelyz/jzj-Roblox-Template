@@ -60,7 +60,7 @@ local function createMainMenu()
     -- 主标题
     UI.createLabel({
         name = "TitleLabel",
-        text = "OverBid",
+        text = Config.game.name,
         parent = backgroundFrame,
         size = UDim2.new(0.8, 0, 0.15, 0),
         position = UDim2.new(0.1, 0, 0.15, 0),
