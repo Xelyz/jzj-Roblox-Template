@@ -1,10 +1,7 @@
 -- Config - 模板配置代理
 -- 从外部GameConfig读取配置，支持逐项fallback
 
-local Config = {}
-
--- 默认配置
-local DEFAULT_CONFIG = {
+local Config = {
     game = {
         -- 通用游戏配置
         maxPlayers = 4,
@@ -83,10 +80,7 @@ end
 
 if success then
     -- 使用外部配置，但对每个配置项进行fallback
-    Config = mergeConfig(DEFAULT_CONFIG, GameConfig)
-else
-    -- 如果外部配置不存在，使用默认配置
-    Config = DEFAULT_CONFIG
+    Config = mergeConfig(Config, GameConfig)
 end
 
 return Config 
