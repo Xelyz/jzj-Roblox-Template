@@ -66,8 +66,7 @@ local function createMainMenu()
         position = UDim2.new(0.1, 0, 0.15, 0),
         textSize = 48,
         font = Enum.Font.SourceSansBold,
-        transparent = true,
-        textScaled = true
+        transparent = true
     })
     
     -- -- 副标题

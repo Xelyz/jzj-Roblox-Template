@@ -89,8 +89,8 @@ function UI.createLabel(config)
     label.Font = config.font or Enum.Font.SourceSans
     label.TextXAlignment = config.textXAlignment or Enum.TextXAlignment.Center
     label.TextYAlignment = config.textYAlignment or Enum.TextYAlignment.Center
-    label.TextWrapped = config.textWrapped or false
-    label.TextScaled = config.textScaled or false
+    label.TextWrapped = config.textWrapped or true
+    label.TextScaled = config.textScaled or true
     label.BackgroundTransparency = config.transparent and 1 or 0
     label.BackgroundColor3 = config.backgroundColor or UI.Colors.Panel
     label.BorderSizePixel = config.borderSize or 0
