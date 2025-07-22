@@ -115,6 +115,8 @@ function UI.createButton(config)
     button.Text = config.text or "Button"
     button.TextSize = config.textSize or 18
     button.TextColor3 = config.textColor or UI.Colors.TextWhite
+    button.TextScaled = config.textScaled or true
+    button.TextWrapped = config.textWrapped or true
     button.Font = config.font or Enum.Font.SourceSansBold
     button.BackgroundColor3 = config.backgroundColor or UI.Colors.ButtonGray
     button.BorderSizePixel = config.borderSize or 0
