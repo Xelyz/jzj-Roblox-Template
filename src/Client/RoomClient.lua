@@ -544,11 +544,11 @@ function showRoomInterface(roomData)
             
             if isHost then
                 if not hasEnoughPlayers then
-                    startButton.Text = string.format("Need %d players", Config.game.minPlayers)
+                    startButton:FindFirstChild("ButtonLabel").Text = string.format("Need %d players", Config.game.minPlayers)
                 elseif not allPlayersReady then
-                    startButton.Text = string.format("Waiting for %d players to be ready", notReadyCount)
+                    startButton:FindFirstChild("ButtonLabel").Text = string.format("Waiting for %d players to be ready", notReadyCount)
                 else
-                    startButton.Text = "Start Game"
+                    startButton:FindFirstChild("ButtonLabel").Text = "Start Game"
                 end
             end
         end
@@ -566,7 +566,7 @@ function showRoomInterface(roomData)
                     end
                 end
                 
-                readyButton.Text = localPlayerReady and "Cancel Ready" or "Ready"
+                readyButton:FindFirstChild("ButtonLabel").Text = localPlayerReady and "Cancel Ready" or "Ready"
                 UI.styleButton(readyButton, localPlayerReady and "danger" or "success")
             end
         end
@@ -631,11 +631,11 @@ RoomPlayerUpdate:Connect(function(roomData)
                 
                 if isHost then
                     if not hasEnoughPlayers then
-                        startButton.Text = string.format("Need %d players", 2)
+                        startButton:FindFirstChild("ButtonLabel").Text = string.format("Need %d players", 2)
                     elseif not allPlayersReady then
-                        startButton.Text = string.format("Waiting for %d players to be ready", notReadyCount)
+                        startButton:FindFirstChild("ButtonLabel").Text = string.format("Waiting for %d players to be ready", notReadyCount)
                     else
-                        startButton.Text = "Start Game"
+                        startButton:FindFirstChild("ButtonLabel").Text = "Start Game"
                     end
                 end
             end
@@ -655,7 +655,7 @@ RoomPlayerUpdate:Connect(function(roomData)
                         end
                     end
                     
-                    readyButton.Text = localPlayerReady and "Cancel Ready" or "Ready"
+                    readyButton:FindFirstChild("ButtonLabel").Text = localPlayerReady and "Cancel Ready" or "Ready"
                     UI.styleButton(readyButton, localPlayerReady and "danger" or "success")
                 end
             end

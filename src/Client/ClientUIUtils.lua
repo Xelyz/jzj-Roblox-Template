@@ -112,12 +112,25 @@ function UI.createButton(config)
     button.Name = config.name or "Button"
     button.Size = config.size or UDim2.new(0.2, 0, 0.08, 0)
     button.Position = config.position or UDim2.new(0, 0, 0, 0)
-    button.Text = config.text or "Button"
-    button.TextSize = config.textSize or 18
-    button.TextColor3 = config.textColor or UI.Colors.TextWhite
-    button.TextScaled = config.textScaled or true
-    button.TextWrapped = config.textWrapped or true
-    button.Font = config.font or Enum.Font.SourceSansBold
+    button.Text = ""
+
+    UI.createLabel(
+        {
+            name = "ButtonLabel",
+            text = config.text or "Button",
+            parent = button,
+            size = UDim2.new(0.8, 0, 0.8, 0),
+            position = UDim2.new(0.1, 0, 0.1, 0),
+            textSize = config.textSize or 18,
+            textColor = config.textColor or UI.Colors.TextWhite,
+            textScaled = config.textScaled or true,
+            textWrapped = config.textWrapped or true,
+            font = config.font or Enum.Font.SourceSansBold,
+            transparent = true,
+            zIndex = config.zIndex or 0
+        }
+    )
+
     button.BackgroundColor3 = config.backgroundColor or UI.Colors.ButtonGray
     button.BorderSizePixel = config.borderSize or 0
     button.BorderColor3 = config.borderColor or UI.Colors.Border
@@ -190,10 +203,10 @@ end
 function UI.setButtonEnabled(button, enabled)
     if enabled then
         button.BackgroundColor3 = button:GetAttribute("originalColor") or UI.Colors.ButtonGreen
-        button.TextColor3 = UI.Colors.TextWhite
+        button:FindFirstChild("ButtonLabel").TextColor3 = UI.Colors.TextWhite
     else
         button.BackgroundColor3 = UI.Colors.ButtonDisabled
-        button.TextColor3 = UI.Colors.TextGray
+        button:FindFirstChild("ButtonLabel").TextColor3 = UI.Colors.TextGray
     end
 end
 
