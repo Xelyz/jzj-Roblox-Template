@@ -224,12 +224,11 @@ function UI.styleButton(button, style)
 end
 
 function UI.createAvatarImage(config)
-    local avatarSize = UDim2.new(0.8, 0, 0.5, 0)
-    
     local container = UI.createFrame({
-        name = "AvatarContainer",
+        name = config.name or "AvatarContainer",
         parent = config.parent,
-        size = avatarSize,
+        size = config.size or UDim2.new(0, 60, 0, 60),
+        position = config.position or UDim2.new(0, 0, 0, 0),
         backgroundTransparency = 1,
         zIndex = config.zIndex or 0
     })
@@ -238,30 +237,34 @@ function UI.createAvatarImage(config)
         name = "AvatarBackground",
         parent = container,
         size = UDim2.new(1, 0, 1, 0),
-        position = UDim2.new(0.5, 0, 0.5, 0),
-        backgroundColor = Color3.fromRGB(100, 150, 100),
-        borderSize = 2,
-        borderColor = Color3.fromRGB(150, 200, 150),
+        position = UDim2.new(0, 0, 0, 0),
+        backgroundColor = config.backgroundColor or Color3.fromRGB(255, 255, 255),
+        borderSize = config.borderSize or 0,
+        borderColor = config.borderColor or UI.Colors.Border,
         corner = true,
-        cornerRadius = UDim.new(0.5, 0),
+        cornerRadius = config.cornerRadius or UDim.new(0.5, 0),
         zIndex = config.zIndex or 0
     })
-    background.AnchorPoint = Vector2.new(0.5, 0.5)
 
-    local aspect = Instance.new("UIAspectRatioConstraint")
-    aspect.AspectRatio = 1
-    aspect.AspectType = Enum.AspectType.FitWithinMaxSize
-    aspect.Parent = background
+    -- 如果指定了保持圆形，添加宽高比约束
+    if config.keepSquare ~= false then
+        local aspect = Instance.new("UIAspectRatioConstraint")
+        aspect.AspectRatio = 1
+        aspect.AspectType = Enum.AspectType.FitWithinMaxSize
+        aspect.Parent = background
+    end
 
     local image = Instance.new("ImageLabel")
     image.Name = "AvatarImage"
-    image.Size = UDim2.new(1, -4, 1, -4)
-    image.Position = UDim2.new(0, 2, 0, 2)
+    local imagePadding = config.imagePadding or 2
+    image.Size = UDim2.new(1, -imagePadding * 2, 1, -imagePadding * 2)
+    image.Position = UDim2.new(0, imagePadding, 0, imagePadding)
     image.Image = "rbxthumb://type=AvatarHeadShot&id=" .. config.userId .. "&w=150&h=150"
     image.BackgroundTransparency = 1
     image.ZIndex = config.zIndex or 0
     image.Parent = background
-    UI.addCorner(image, UDim.new(0.5, 0))
+    
+    UI.addCorner(image, config.cornerRadius or UDim.new(0.5, 0))
     
     return container
 end
