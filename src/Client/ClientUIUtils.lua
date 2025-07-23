@@ -267,6 +267,9 @@ function UI.createAvatarImage(config)
     
     UI.addCorner(image, config.cornerRadius or UDim.new(0.5, 0))
     
+    -- 为容器添加快捷访问内部ImageLabel的属性
+    container.ImageLabel = image
+    
     return container
 end
 
