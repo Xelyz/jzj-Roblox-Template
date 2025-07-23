@@ -14,6 +14,7 @@ UI.Colors = {
     ButtonDisabled = Color3.fromRGB(100, 100, 100),
     
     TextWhite = Color3.fromRGB(255, 255, 255),
+    TextPrimary = Color3.fromRGB(255, 255, 255), -- 添加TextPrimary作为白色文本的别名
     TextGray = Color3.fromRGB(200, 200, 200),
     TextGreen = Color3.fromRGB(100, 255, 100),
     TextYellow = Color3.fromRGB(255, 255, 100),
