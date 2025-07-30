@@ -3,6 +3,7 @@
 local MatchService = {}
 
 local Utils = require(script.Parent.ServerUtils)
+local Config = require(script.Parent.Parent.Config)
 
 -- [matchId] = {players = {player1, player2, ...}, state = {}}
 MatchService.activeGames = {}
@@ -16,18 +17,20 @@ function MatchService.GetMatch(matchId)
 end
 
 function MatchService.AddMatch(players)
-    if not players or #players < 2 then
+    local minPlayers = Config.game.minPlayers or 2 -- 默认2人，防止配置缺失
+    if not players or #players < minPlayers then
         print("Error: AddMatch called with invalid parameters")
         print("  players:", players and #players or "nil")
+        print("  minPlayers required:", minPlayers)
         return nil
     end
-    
+
     local matchId = Utils.generateId("match")
     local playerNames = {}
     for i, player in ipairs(players) do
         table.insert(playerNames, player.Name)
     end
-    
+
     print("Adding match:", matchId, "with", #players, "players:", table.concat(playerNames, ", "))
     MatchService.activeGames[matchId] = {
         players = players
