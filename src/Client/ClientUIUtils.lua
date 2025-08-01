@@ -61,8 +61,10 @@ end
 function UI.createFrame(config)
     local frame = Instance.new("Frame")
     frame.Name = config.name or "Frame"
+    frame.AnchorPoint = config.anchorPoint or Vector2.new(0, 0)
     frame.Size = config.size or UDim2.new(1, 0, 1, 0)
     frame.Position = config.position or UDim2.new(0, 0, 0, 0)
+    frame.Rotation = config.rotation or 0
     frame.BackgroundColor3 = config.backgroundColor or UI.Colors.Panel
     frame.BackgroundTransparency = config.backgroundTransparency or 0
     frame.BorderSizePixel = config.borderSize or 0
@@ -78,12 +80,28 @@ function UI.createFrame(config)
     return frame
 end
 
+function UI.createCanvas(config)
+    local canvas = Instance.new("CanvasGroup")
+    canvas.Name = config.name or "Canvas"
+    canvas.AnchorPoint = config.anchorPoint or Vector2.new(0, 0)
+    canvas.Size = config.size or UDim2.new(1, 0, 1, 0)
+    canvas.Position = config.position or UDim2.new(0, 0, 0, 0)
+    canvas.Rotation = config.rotation or 0
+    canvas.BackgroundColor3 = config.backgroundColor or UI.Colors.Panel
+    canvas.BackgroundTransparency = config.backgroundTransparency or 0
+    canvas.Parent = config.parent
+    canvas.ZIndex = config.zIndex or 0
+    return canvas
+end
+
 -- 创建Label
 function UI.createLabel(config)
     local label = Instance.new("TextLabel")
     label.Name = config.name or "Label"
+    label.AnchorPoint = config.anchorPoint or Vector2.new(0, 0)
     label.Size = config.size or UDim2.new(1, 0, 1, 0)
     label.Position = config.position or UDim2.new(0, 0, 0, 0)
+    label.Rotation = config.rotation or 0
     label.Text = config.text or ""
     label.TextSize = config.textSize or 18
     label.TextColor3 = config.textColor or UI.Colors.TextWhite
