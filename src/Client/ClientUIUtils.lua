@@ -151,6 +151,7 @@ function UI.createButton(config)
     )
 
     button.BackgroundColor3 = config.backgroundColor or UI.Colors.ButtonGray
+    button.BackgroundTransparency = config.backgroundTransparency or 0
     button.BorderSizePixel = config.borderSize or 0
     button.BorderColor3 = config.borderColor or UI.Colors.Border
     button.Parent = config.parent
