@@ -165,20 +165,16 @@ local function isRoomRestored(player)
 end
 
 -- 事件处理
-RoomCreateRequest:Connect(function(player, roomName)
+RoomCreateRequest:Connect(function(player)
     if not Utils.isValidPlayer(player) then return end
-    
-    local isValid, error = Utils.validateRoomName(roomName)
-    if not isValid then
-        Utils.warn("RoomManager", "Invalid room name", error)
-        return
-    end
-    
+
     if playerToRoom[player] then
         Utils.warn("RoomManager", "Player already in room", player.Name)
         return
     end
     
+    -- 使用 Roblox 提供的显示名生成房名，避免客户端传入任意公开文本。
+    local roomName = player.DisplayName .. "'s room"
     local room = createRoom(roomName, player)
     rooms[room.id] = room
     playerToRoom[player] = room.id
@@ -426,50 +422,44 @@ GameFinishedNotification:Connect(function(data)
     end
 end)
 
--- 玩家离开处理
+-- 玩家离开处理。
 Players.PlayerRemoving:Connect(function(player)
     Utils.log("RoomManager", "Player disconnecting", player.Name)
+    local roomId = playerToRoom[player]
+    local room = roomId and rooms[roomId]
+    local matchId = room and room.matchId
     removePlayerFromRoom(player)
-    
-    -- 处理进行中的匹配
-    for matchId, match in pairs(MatchService.activeGames) do
-        if Utils.contains(match.players, player) then
-            local remainingPlayers = {}
-            for _, p in ipairs(match.players) do
-                if p ~= player and Utils.isValidPlayer(p) then
-                    table.insert(remainingPlayers, p)
-                end
-            end
-            
-            Utils.log("RoomManager", "Player left match", matchId)
-            
-            if Utils.shouldAbortGame(#remainingPlayers) then
-                Utils.log("RoomManager", "Aborting game", matchId)
-                
-                for _, other in ipairs(remainingPlayers) do
-                    GameAborted:FireClient(other, {
-                        matchId = matchId,
-                        message = "Game aborted: " .. player.Name .. " left the game",
-                        leftPlayer = player.Name,
-                        remainingPlayers = #remainingPlayers
-                    })
-                end
-                
-                MatchService.RemoveMatch(matchId)
-                local roomId, room = findRoomByMatchId(matchId)
-                if roomId and room then
-                    room.isGameStarted = false
-                    room.matchId = nil
-                    room.playerReadyStatus = {}
-                    Utils.log("RoomManager", "Room reset after abort", roomId)
-                end
-            end
-            
-            break
+
+    -- 房间中的当前对局才会受离开影响。
+    local match = matchId and MatchService.GetMatch(matchId)
+    if not match then
+        return
+    end
+
+    local remainingPlayers = {}
+    for _, other in ipairs(match.players) do
+        if other ~= player and Utils.isValidPlayer(other) then
+            table.insert(remainingPlayers, other)
         end
+    end
+    if not Config.game.abortOnPlayerLeave and not Utils.shouldAbortGame(#remainingPlayers) then
+        return
+    end
+
+    if rooms[roomId] then
+        restoreRoomAfterGame(matchId)
+    end
+    MatchService.RemoveMatch(matchId)
+    for _, other in ipairs(remainingPlayers) do
+        GameAborted:FireClient(other, {
+            matchId = matchId,
+            message = "Game aborted: " .. player.Name .. " left the game",
+            leftPlayer = player.Name,
+            remainingPlayers = #remainingPlayers
+        })
     end
 end)
 
-Utils.log("RoomManager", "RoomManager initialized") 
+Utils.log("RoomManager", "RoomManager initialized")
 
 return M

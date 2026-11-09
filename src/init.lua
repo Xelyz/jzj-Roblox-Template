@@ -20,7 +20,6 @@ if RunService:IsServer() then
 
     -- Managers that listen to events and execute logic
     require(script.Server.RoomManager)
-    require(script.Server.ChatManager)
     require(script.Server.LeaderboardManager)
     require(script.Server.DisableMovementServer)
 

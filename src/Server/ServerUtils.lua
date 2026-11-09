@@ -81,7 +81,7 @@ end
 
 -- ID生成
 function Utils.generateId(prefix)
-    return prefix .. "_" .. os.time() .. "_" .. math.random(1000, 9999)
+    return prefix .. "_" .. game:GetService("HttpService"):GenerateGUID(false)
 end
 
 -- 配置从外部Config模块获取

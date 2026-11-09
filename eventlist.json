@@ -5,7 +5,6 @@
   {"name": "GameStateUpdate", "type": "Remote"},
   {"name": "GameAborted", "type": "Remote"},
   {"name": "GameFinished", "type": "Remote"},
-  {"name": "MatchMessage", "type": "Remote"},
   {"name": "GameGuiCreated", "type": "Bindable"},
   {"name": "MatchStarted", "type": "Remote"},
   {"name": "RoomCreateRequest", "type": "Remote"},

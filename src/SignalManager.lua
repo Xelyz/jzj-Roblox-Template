@@ -30,6 +30,7 @@
 ]]
 
 -- 服务
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -46,15 +47,30 @@ local remoteFunctions = {}
 -- 模块主表
 local SignalManager = {}
 
--- 内部函数：获取或创建用于存放 RemoteEvent 的文件夹
-local function getRemotesFolder()
-	local folder = ReplicatedStorage:FindFirstChild(REMOTES_FOLDER_NAME)
-	if not folder then
-		folder = Instance.new("Folder")
-		folder.Name = REMOTES_FOLDER_NAME
-		folder.Parent = ReplicatedStorage
-	end
-	return folder
+-- 远程实例由服务端创建，客户端等待实际的复制实例。
+local function getRemoteInstance(name, className)
+    local folder
+    local remote
+    if IS_SERVER then
+        folder = ReplicatedStorage:FindFirstChild(REMOTES_FOLDER_NAME)
+        if not folder then
+            folder = Instance.new("Folder")
+            folder.Name = REMOTES_FOLDER_NAME
+            folder.Parent = ReplicatedStorage
+        end
+        remote = folder:FindFirstChild(name)
+        if not remote then
+            remote = Instance.new(className)
+            remote.Name = name
+            remote.Parent = folder
+        end
+    else
+        folder = ReplicatedStorage:WaitForChild(REMOTES_FOLDER_NAME, 15)
+        assert(folder, "Signal remotes folder did not replicate")
+        remote = folder:WaitForChild(name, 15)
+    end
+    assert(remote and remote:IsA(className), "Missing or invalid " .. className .. ": " .. name)
+    return remote
 end
 
 --================---- Bindable Signals ----================--
@@ -102,14 +118,11 @@ function SignalManager.GetRemote(signalName)
 		return remoteSignals[signalName]
 	end
 
-	local remotesFolder = getRemotesFolder()
-	local remoteEvent = remotesFolder:FindFirstChild(signalName)
-	if not remoteEvent then
-		remoteEvent = Instance.new("RemoteEvent")
-		remoteEvent.Name = signalName
-		remoteEvent.Parent = remotesFolder
+	local remoteEvent = getRemoteInstance(signalName, "RemoteEvent")
+	if remoteSignals[signalName] then
+		return remoteSignals[signalName]
 	end
-	
+
 	local signal = {}
 
 	if IS_SERVER then
@@ -135,11 +148,15 @@ function SignalManager.GetRemote(signalName)
 		end
 
 		function signal:FireAllExcept(player, ...)
-			remoteEvent:FireAllClientsExcept(player, ...)
+			for _, recipient in ipairs(Players:GetPlayers()) do
+				if recipient ~= player then
+					remoteEvent:FireClient(recipient, ...)
+				end
+			end
 		end
 
 		function signal:FireAllClientsExcept(player, ...)
-			remoteEvent:FireAllClientsExcept(player, ...)
+			self:FireAllExcept(player, ...)
 		end
 		
 	elseif IS_CLIENT then
@@ -182,14 +199,11 @@ function SignalManager.GetRemoteFunction(functionName)
 		return remoteFunctions[functionName]
 	end
 
-	local remotesFolder = getRemotesFolder()
-	local remoteFunc = remotesFolder:FindFirstChild(functionName)
-	if not remoteFunc then
-		remoteFunc = Instance.new("RemoteFunction")
-		remoteFunc.Name = functionName
-		remoteFunc.Parent = remotesFolder
+	local remoteFunc = getRemoteInstance(functionName, "RemoteFunction")
+	if remoteFunctions[functionName] then
+		return remoteFunctions[functionName]
 	end
-	
+
 	local funcObj = {}
 
 	if IS_SERVER then

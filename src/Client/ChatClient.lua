@@ -1,232 +1,140 @@
-local M = {}
-
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local TextChatService = game:GetService("TextChatService")
 
--- 导入SignalManager和工具模块
 local SignalManager = require(script.Parent.Parent.SignalManager)
-local UI = require(script.Parent.ClientUIUtils)
 local Config = require(script.Parent.Parent.Config)
-
-local MatchMessage = SignalManager.GetRemote("MatchMessage")
+local UI = require(script.Parent.ClientUIUtils)
 local ClientMatchState = require(script.Parent.MatchStateClient)
 
 local GameGuiCreated = SignalManager.GetBindable("GameGuiCreated")
+local localPlayer = Players.LocalPlayer
 
--- 消息缓存机制
-local pendingMessages = {}
-
--- 添加消息到聊天显示区域
-local function addMessageToChat(sender, message, container)
-    local messageCount = #container:GetChildren()
-    local messageHeight = Config.ui.messageHeight
-    
-    local messageFrame = UI.createFrame({
-        name = "MessageFrame",
-        size = UDim2.new(1, -5, 0, messageHeight),
-        position = UDim2.new(0, 0, 0, messageCount * messageHeight),
-        backgroundTransparency = 1,
-        parent = container
-    })
-    
-    -- 发送者标签
-    UI.createLabel({
-        name = "SenderLabel",
-        size = UDim2.new(1, 0, 0.5, 0),
-        position = UDim2.new(0, 5, 0, 0),
-        text = sender .. ":",
-        textSize = 12,
-        textColor = sender == "You" and UI.Colors.TextGreen or UI.Colors.TextYellow,
-        textXAlignment = Enum.TextXAlignment.Left,
-        font = Enum.Font.SourceSansBold,
-        transparent = true,
-        parent = messageFrame
-    })
-    
-    -- 消息内容标签
-    UI.createLabel({
-        name = "MessageLabel",
-        size = UDim2.new(1, -10, 0.5, 0),
-        position = UDim2.new(0, 10, 0.5, 0),
-        text = message,
-        textSize = 11,
-        textColor = UI.Colors.TextWhite,
-        textXAlignment = Enum.TextXAlignment.Left,
-        textWrapped = true,
-        font = Enum.Font.SourceSans,
-        transparent = true,
-        parent = messageFrame
-    })
-    
-    -- 更新容器大小
-    container.Size = UDim2.new(1, 0, 0, (messageCount + 1) * messageHeight)
-    
-    -- 更新滚动框的画布大小并滚动到底部
-    local scrollingFrame = container.Parent
-    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, container.Size.Y.Offset)
-    scrollingFrame.CanvasPosition = Vector2.new(0, math.max(0, container.Size.Y.Offset - scrollingFrame.AbsoluteSize.Y))
-end
-
--- 为GameGui添加聊天功能的辅助函数
-local function addChatToGameGui(gameGui)
-    if not gameGui then
-        gameGui = LocalPlayer.PlayerGui:FindFirstChild("GameGui")
-        if not gameGui then
-            print("Error: GameGui not found when trying to add chat")
-            return false
+-- 查找 Roblox 授权的本地发送者。
+local function getLocalSource(channel)
+    for _, source in ipairs(channel:GetChildren()) do
+        if source:IsA("TextSource") and source.UserId == localPlayer.UserId then
+            return source
         end
     end
-    
-    -- 检查是否已经添加了聊天功能
-    if gameGui:FindFirstChild("ChatFrame") then
-        return true -- 已经存在
-    end
-    
-    print("Adding chat to GameGui")
-    
-    -- 找到主内容框架
+    return nil
+end
+
+-- 把原生频道窗口和输入框挂到对局界面。
+GameGuiCreated:Connect(function(gameGui)
+    local matchId = ClientMatchState.GetMatchId()
     local contentFrame = gameGui:FindFirstChild("ContentFrame", true)
-    if not contentFrame then
-        print("Error: ContentFrame not found")
-        return false
+    if not matchId or not contentFrame then
+        return
     end
-    
-    -- 创建聊天框架
-    local chatFrame = UI.createFrame({
+
+    local channel = TextChatService:WaitForChild(matchId, 10)
+    if not gameGui.Parent or ClientMatchState.GetMatchId() ~= matchId then
+        return
+    end
+    if not channel or not channel:IsA("TextChannel") then
+        warn("Match chat channel unavailable:", matchId)
+        return
+    end
+
+    -- 宿主界面可提供 ChatSlot 指定聊天位置，否则放在内容区右侧。
+    local slot = gameGui:FindFirstChild("ChatSlot", true)
+    local frame = UI.createFrame({
         name = "ChatFrame",
-        size = UDim2.new(0.25, -10, 1, -20),
-        position = UDim2.new(0.75, 5, 0, 10),
-        backgroundColor = UI.Colors.Panel,
-        borderSize = 2,
-        borderColor = UI.Colors.Border,
-        parent = contentFrame
+        size = slot and UDim2.new(1, 0, 1, 0) or UDim2.new(0.25, -10, 1, -20),
+        position = slot and UDim2.new(0, 0, 0, 0) or UDim2.new(0.75, 5, 0, 10),
+        backgroundColor = UI.Colors.Ink,
+        corner = true,
+        cornerRadius = UDim.new(0, 14),
+        stroke = true,
+        strokeThickness = 3,
+        parent = slot or contentFrame
     })
-    
-    -- 聊天标题
+
     UI.createLabel({
         name = "ChatTitle",
-        size = UDim2.new(1, 0, 0.1, 0),
-        text = "Chat",
-        textSize = 24,
-        backgroundColor = UI.Colors.Background,
-        borderSize = 1,
-        borderColor = UI.Colors.Border,
-        font = Enum.Font.SourceSansBold,
-        parent = chatFrame
+        parent = frame,
+        text = "Table Talk",
+        size = UDim2.new(1, -24, 0, 30),
+        position = UDim2.new(0, 12, 0, 6),
+        textSize = 20,
+        font = UI.Fonts.Display,
+        textColor = UI.Colors.Honey,
+        textXAlignment = Enum.TextXAlignment.Left,
     })
-    
-    -- 聊天显示区域
-    local chatDisplay = UI.createScrollingFrame({
-        name = "ChatDisplay",
-        size = UDim2.new(1, -10, 0.8, -10),
-        position = UDim2.new(0, 5, 0.1, 5),
-        backgroundColor = UI.Colors.Panel,
-        borderSize = 1,
-        borderColor = UI.Colors.Border,
-        scrollBarThickness = 8,
-        cornerRadius = UDim.new(0, 8),
-        parent = chatFrame
-    })
-    
-    -- 聊天消息容器
-    local chatContainer = UI.createFrame({
-        name = "ChatContainer",
-        size = UDim2.new(1, -15, 1, 0),
-        backgroundTransparency = 1,
-        parent = chatDisplay
-    })
-    
-    -- 聊天输入区域
-    local inputFrame = UI.createFrame({
-        name = "InputFrame",
-        size = UDim2.new(1, -10, 0.1, -10),
-        position = UDim2.new(0, 5, 0.9, 5),
-        backgroundTransparency = 1,
-        parent = chatFrame
-    })
-    
-    -- 聊天输入框
-    local chatInput = Instance.new("TextBox")
-    chatInput.Name = "ChatInput"
-    chatInput.Size = UDim2.new(0.7, -5, 1, 0)
-    chatInput.Position = UDim2.new(0, 0, 0, 0)
-    chatInput.PlaceholderText = "Type message..."
-    chatInput.TextSize = 14
-    chatInput.BackgroundColor3 = UI.Colors.TextWhite
-    chatInput.TextColor3 = Color3.fromRGB(0, 0, 0)
-    chatInput.BorderSizePixel = 1
-    chatInput.BorderColor3 = UI.Colors.Border
-    chatInput.Font = Enum.Font.SourceSans
-    chatInput.TextXAlignment = Enum.TextXAlignment.Left
-    chatInput.Parent = inputFrame
-    
-    -- 发送按钮
-    local sendBtn = UI.createButton({
-        name = "SendButton",
-        size = UDim2.new(0.3, -5, 1, 0),
-        position = UDim2.new(0.7, 5, 0, 0),
-        text = "Send",
-        textSize = 14,
-        backgroundColor = UI.Colors.ButtonGreen,
-        cornerRadius = UDim.new(0, 6),
-        parent = inputFrame
-    })
-    
-    -- 发送消息功能
-    local function sendMessage()
-        if chatInput.Text ~= "" and ClientMatchState.GetMatchId() then
-            print("Sending message:", chatInput.Text)
-            MatchMessage:FireServer({matchId = ClientMatchState.GetMatchId(), message = chatInput.Text})
-            addMessageToChat("You", chatInput.Text, chatContainer)
-            chatInput.Text = ""
+
+    local window = Instance.new("TextChannelWindow")
+    window.Name = "MatchChatWindow"
+    window.Size = UDim2.new(1, -12, 1, -88)
+    window.Position = UDim2.new(0, 6, 0, 38)
+    window.BackgroundTransparency = 1
+    window.Target = channel
+    window.Parent = frame
+
+    local input = Instance.new("TextBox")
+    input.Name = "ChatInput"
+    input.AnchorPoint = Vector2.new(0, 1)
+    input.Size = UDim2.new(1, -20, 0, 38)
+    input.Position = UDim2.new(0, 10, 1, -10)
+    input.PlaceholderText = "Type a message and press Enter"
+    input.PlaceholderColor3 = UI.Colors.InkSoft
+    input.Text = ""
+    input.TextSize = 17
+    input.Font = UI.Fonts.Medium
+    input.TextColor3 = UI.Colors.Ink
+    input.BackgroundColor3 = UI.Colors.Paper
+    input.TextXAlignment = Enum.TextXAlignment.Left
+    input.ClearTextOnFocus = false
+    input.Visible = false
+    UI.addCorner(input, UDim.new(0, 10))
+    UI.addPadding(input, 0, 10)
+    input.Parent = frame
+
+    local sourceConnection
+    local function refreshInput()
+        if sourceConnection then
+            sourceConnection:Disconnect()
+            sourceConnection = nil
+        end
+        local source = getLocalSource(channel)
+        input.Visible = source ~= nil and source.CanSend
+        if source then
+            sourceConnection = source:GetPropertyChangedSignal("CanSend"):Connect(refreshInput)
         end
     end
-    
-    sendBtn.MouseButton1Click:Connect(sendMessage)
-    chatInput.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            sendMessage()
+
+    local addedConnection = channel.ChildAdded:Connect(refreshInput)
+    local removedConnection = channel.ChildRemoved:Connect(refreshInput)
+    frame.Destroying:Connect(function()
+        addedConnection:Disconnect()
+        removedConnection:Disconnect()
+        if sourceConnection then
+            sourceConnection:Disconnect()
         end
     end)
-    
-    -- 处理缓存的消息
-    for _, messageData in ipairs(pendingMessages) do
-        addMessageToChat(messageData.sender, messageData.message, chatContainer)
-    end
-    pendingMessages = {} -- 清空缓存
-    
-    return true -- 成功添加
-end
+    refreshInput()
 
--- 监听GameGui创建事件
-GameGuiCreated:Connect(function(gameGui)
-    print("ChatClient: Received GameGui created event")
-    addChatToGameGui(gameGui)
+    local nextSendAt = 0
+    input.FocusLost:Connect(function(enterPressed)
+        local message = input.Text
+        local length = utf8.len(message)
+        if not enterPressed or not input.Visible or not channel.Parent
+            or not message:find("%S") or not length or length > Config.chat.maxMessageLength
+            or os.clock() < nextSendAt
+        then
+            return
+        end
+
+        nextSendAt = os.clock() + Config.chat.cooldownTime
+        input.Text = ""
+        local ok, result = pcall(channel.SendAsync, channel, message)
+        if not ok then
+            warn("Match chat send failed:", matchId, "SendAsync failed")
+        elseif result.Status ~= Enum.TextChatMessageStatus.Sending
+            and result.Status ~= Enum.TextChatMessageStatus.Success
+        then
+            warn("Match chat send failed:", matchId, tostring(result.Status))
+        end
+    end)
 end)
 
--- 监听聊天消息事件
-MatchMessage:Connect(function(data)
-    -- data = {matchId = ..., from = ..., message = ...}
-    
-    -- 只处理当前比赛的消息
-    if data.matchId == ClientMatchState.GetMatchId() then
-        -- 找到聊天容器并添加消息
-        local gameGui = LocalPlayer.PlayerGui:FindFirstChild("GameGui")
-        if gameGui then
-            local chatContainer = gameGui:FindFirstChild("ChatContainer", true)
-            if chatContainer then
-                addMessageToChat(data.from, data.message, chatContainer)
-            else
-                -- 聊天容器还不存在，缓存消息
-                print("Chat container not found, caching message from:", data.from)
-                table.insert(pendingMessages, {sender = data.from, message = data.message})
-            end
-        else
-            -- GameGui还不存在，缓存消息
-            print("GameGui not found, caching message from:", data.from)
-            table.insert(pendingMessages, {sender = data.from, message = data.message})
-        end
-    end
-end) 
-
-return M
+return {}

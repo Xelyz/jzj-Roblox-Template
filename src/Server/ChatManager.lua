@@ -1,39 +1,38 @@
-local M = {}
+local TextChatService = game:GetService("TextChatService")
+local Players = game:GetService("Players")
 
--- ChatManager (Server) - 专门处理游戏内聊天消息
+local ChatManager = {}
 
--- 导入SignalManager
-local SignalManager = require(script.Parent.Parent.SignalManager)
+-- 为比赛创建独立频道，交由 Roblox 处理过滤和聊天权限。
+function ChatManager.CreateChannel(matchId, players)
+    local channel = Instance.new("TextChannel")
+    channel.Name = matchId
 
-local MatchMessage = SignalManager.GetRemote("MatchMessage")
-local MatchService = require(script.Parent.MatchService)
-
--- 处理游戏内聊天消息中继
-MatchMessage:Connect(function(sender, data)
-    -- data = {matchId = ..., message = ...}
-    if not data or not data.matchId or not data.message then
-        print("Invalid match message data from:", sender.Name)
-        return
+    local members = {}
+    for _, player in ipairs(players) do
+        members[player.UserId] = player
     end
-    
-    print("Relaying message in match:", data.matchId, "from:", sender.Name, "message:", data.message)
-    
-    local match = MatchService.GetMatch(data.matchId)
-    if match then
-        -- 转发消息给同一比赛中的其他玩家
-        for i, p in ipairs(match.players) do
-            if p ~= sender then
-                MatchMessage:FireClient(p, {
-                    from = sender.Name, 
-                    message = data.message, 
-                    matchId = data.matchId
-                })
-                print("Message relayed to:", p.Name)
+
+    channel.ShouldDeliverCallback = function(message, recipient)
+        local sender = message.TextSource and members[message.TextSource.UserId]
+        local receiver = members[recipient.UserId]
+        return sender ~= nil and sender.Parent == Players
+            and receiver ~= nil and receiver.Parent == Players
+    end
+
+    channel.Parent = TextChatService
+    for _, player in ipairs(players) do
+        task.defer(function()
+            if channel.Parent and player.Parent == Players then
+                local ok, err = pcall(channel.AddUserAsync, channel, player.UserId)
+                if not ok and channel.Parent then
+                    warn("Failed to add player to match chat:", matchId, player.UserId, err)
+                end
             end
-        end
-    else
-        print("Match not found for message relay:", data.matchId)
+        end)
     end
-end)
 
-return M 
+    return channel
+end
+
+return ChatManager

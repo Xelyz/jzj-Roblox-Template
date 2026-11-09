@@ -3,6 +3,7 @@
 local MatchService = {}
 
 local Utils = require(script.Parent.ServerUtils)
+local ChatManager = require(script.Parent.ChatManager)
 local Config = require(script.Parent.Parent.Config)
 
 -- [matchId] = {players = {player1, player2, ...}, state = {}}
@@ -33,7 +34,8 @@ function MatchService.AddMatch(players)
 
     print("Adding match:", matchId, "with", #players, "players:", table.concat(playerNames, ", "))
     MatchService.activeGames[matchId] = {
-        players = players
+        players = players,
+        chatChannel = ChatManager.CreateChannel(matchId, players)
     }
     return matchId
 end
@@ -46,7 +48,9 @@ function MatchService.RemoveMatch(matchId)
     
     if MatchService.activeGames[matchId] then
         print("Removing match:", matchId)
+        local match = MatchService.activeGames[matchId]
         MatchService.activeGames[matchId] = nil
+        match.chatChannel:Destroy()
     else
         print("Warning: Attempted to remove non-existent match:", matchId)
     end

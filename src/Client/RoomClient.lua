@@ -1,10 +1,9 @@
--- RoomClient - 房间系统客户端模块
+-- RoomClient - 房间系统客户端模块（主菜单、房间列表、房间内界面）
 local M = {}
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- 导入SignalManager
 local SignalManager = require(script.Parent.Parent.SignalManager)
 
 -- 远程事件
@@ -17,22 +16,22 @@ local RoomPlayerReady = SignalManager.GetRemote("RoomPlayerReady")
 local GetRoomList = SignalManager.GetRemoteFunction("GetRoomList")
 local MatchStarted = SignalManager.GetRemote("MatchStarted")
 local ReturnToRoomRequest = SignalManager.GetRemote("ReturnToRoomRequest")
--- GameFinished功能已合并到ReturnToRoomRequest中
--- GetLeaderboard 和 GetPlayerRank 已移到 LeaderboardClient 模块中
 
 local ClientMatchState = require(script.Parent.MatchStateClient)
 local LeaderboardClient = require(script.Parent.LeaderboardClient)
 local UI = require(script.Parent.ClientUIUtils)
 local Config = require(script.Parent.Parent.Config)
 
+local Colors = UI.Colors
+local Fonts = UI.Fonts
+
 -- UI状态管理
 local currentUI = nil
 local currentRoomData = nil
+local updateRoomDisplay = nil
 
--- Helper to clean up match state and GUIs
-local function _cleanupMatchState()
-    ClientMatchState.Clear()
-end
+local showRoomList
+local showRoomInterface
 
 -- 清理当前UI
 local function cleanupCurrentUI()
@@ -40,6 +39,45 @@ local function cleanupCurrentUI()
         currentUI:Destroy()
         currentUI = nil
     end
+    updateRoomDisplay = nil
+end
+
+-- 创建一个界面根节点：ScreenGui > Stage。背景由 BackgroundManager 提供。
+local function createScreenRoot(name)
+    local screenGui = UI.createScreen(name)
+    local stage = UI.createStage(screenGui)
+    stage.Name = "BackgroundFrame"
+    return screenGui, stage
+end
+
+-- 界面顶部的大标题和副标题
+local function createPageHeading(parent, title, subtitle)
+    UI.createLabel({
+        name = "TitleLabel",
+        parent = parent,
+        text = title,
+        anchorPoint = Vector2.new(0.5, 0),
+        position = UDim2.new(0.5, 0, 0, 24),
+        size = UDim2.new(1, -240, 0, 60),
+        textSize = 50,
+        font = Fonts.Display,
+        textColor = Colors.Paper,
+        textScaled = true,
+    })
+    if subtitle then
+        return UI.createLabel({
+            name = "SubtitleLabel",
+            parent = parent,
+            text = subtitle,
+            anchorPoint = Vector2.new(0.5, 0),
+            position = UDim2.new(0.5, 0, 0, 84),
+            size = UDim2.new(1, -240, 0, 26),
+            textSize = 20,
+            font = Fonts.Medium,
+            textColor = Colors.PaperDeep,
+        })
+    end
+    return nil
 end
 
 -- 显示排行榜界面
@@ -48,684 +86,697 @@ local function showLeaderboard()
     LeaderboardClient.ShowLeaderboard()
 end
 
--- 创建主菜单界面
+-- ===============================
+-- 主菜单
+-- ===============================
+
 local function createMainMenu()
     cleanupCurrentUI()
-    
-    local screenGui = UI.createScreen("RoomSystemGui")
+
+    local screenGui, stage = createScreenRoot("RoomSystemGui")
     currentUI = screenGui
-    
-    local backgroundFrame = UI.createBackground(screenGui, true)
-    
-    -- 主标题
+
+    local column = UI.createFrame({
+        name = "MenuColumn",
+        parent = stage,
+        anchorPoint = Vector2.new(0.5, 0.5),
+        position = UDim2.new(0.5, 0, 0.5, 0),
+        size = UDim2.new(0, 560, 0, 600),
+        backgroundTransparency = 1,
+    })
+
+    -- 游戏盒盖式标题牌
+    local lid = UI.createPanel({
+        name = "TitlePlate",
+        parent = column,
+        size = UDim2.new(1, 0, 0, 200),
+        backgroundColor = Colors.Honey,
+        depth = 8,
+        cornerRadius = UDim.new(0, 20),
+    })
+    local inner = UI.createFrame({
+        name = "InnerBorder",
+        parent = lid,
+        anchorPoint = Vector2.new(0.5, 0.5),
+        position = UDim2.new(0.5, 0, 0.5, 0),
+        size = UDim2.new(1, -20, 1, -20),
+        backgroundTransparency = 1,
+        zIndex = 3,
+    })
+    UI.addCorner(inner, UDim.new(0, 14))
+    UI.addStroke(inner, 2, Colors.HoneyDark)
+
     UI.createLabel({
         name = "TitleLabel",
         text = Config.game.name,
-        parent = backgroundFrame,
-        size = UDim2.new(0.8, 0, 0.15, 0),
-        position = UDim2.new(0.1, 0, 0.15, 0),
-        textSize = 48,
-        font = Enum.Font.SourceSansBold,
-        transparent = true
+        parent = lid,
+        position = UDim2.new(0, 30, 0, 26),
+        size = UDim2.new(1, -60, 0, 100),
+        textSize = 64,
+        font = Fonts.Display,
+        textColor = Colors.Ink,
+        textScaled = true,
+        zIndex = 3,
     })
-    
-    -- -- 副标题
-    -- UI.createLabel({
-    --     name = "SubtitleLabel",
-    --     text = "Simplest? Game Ever",
-    --     parent = backgroundFrame,
-    --     size = UDim2.new(0.6, 0, 0.08, 0),
-    --     position = UDim2.new(0.2, 0, 0.3, 0),
-    --     textSize = 20,
-    --     textColor = UI.Colors.TextGray,
-    --     transparent = true,
-    --     textWrapped = true,
-    --     textScaled = true
-    -- })
-    
-    -- 中央面板
-    local centerPanel = UI.createFrame({
+    UI.createLabel({
+        name = "SubtitleLabel",
+        text = "Welcome, " .. LocalPlayer.DisplayName,
+        parent = lid,
+        position = UDim2.new(0, 30, 0, 130),
+        size = UDim2.new(1, -60, 0, 36),
+        textSize = 22,
+        font = Fonts.Bold,
+        textColor = Colors.Ink,
+        textScaled = true,
+        zIndex = 3,
+    })
+
+    -- 菜单按钮
+    local buttonList = UI.createFrame({
         name = "CenterPanel",
-        parent = backgroundFrame,
-        size = UDim2.new(0.5, 0, 0.5, 0),
-        position = UDim2.new(0.25, 0, 0.35, 0),
-        borderSize = 2,
-        borderColor = UI.Colors.Border,
-        corner = true
+        parent = column,
+        position = UDim2.new(0.5, 0, 0, 240),
+        anchorPoint = Vector2.new(0.5, 0),
+        size = UDim2.new(0, 420, 0, 330),
+        backgroundTransparency = 1,
     })
-    
-    -- 创建按钮
+    UI.addList(buttonList, { padding = 18, horizontalAlignment = Enum.HorizontalAlignment.Center })
+
     local buttons = {
         {
             name = "CreateRoomButton",
             text = "Create Room",
-            position = UDim2.new(0.1, 0, 0.15, 0),
-            size = UDim2.new(0.8, 0, 0.2, 0),
-            backgroundColor = UI.Colors.ButtonGreen,
-            corner = true,
-            cornerRadius = UDim.new(0, 8),
+            backgroundColor = Colors.Green,
             onClick = function()
-                local roomName = LocalPlayer.DisplayName .. "'s room"
-                print("Creating room with name:", roomName)
-                RoomCreateRequest:FireServer(roomName)
-            end
+                RoomCreateRequest:FireServer()
+            end,
         },
         {
-            name = "JoinRoomButton", 
+            name = "JoinRoomButton",
             text = "Join Room",
-            position = UDim2.new(0.1, 0, 0.4, 0),
-            size = UDim2.new(0.8, 0, 0.2, 0),
-            backgroundColor = UI.Colors.ButtonBlue,
-            corner = true,
-            cornerRadius = UDim.new(0, 8),
+            backgroundColor = Colors.Blue,
             onClick = function()
                 showRoomList()
-            end
+            end,
         },
         {
             name = "LeaderboardButton",
             text = "Leaderboard",
-            position = UDim2.new(0.1, 0, 0.65, 0),
-            size = UDim2.new(0.8, 0, 0.2, 0),
-            backgroundColor = UI.Colors.ButtonGray,
-            corner = true,
-            cornerRadius = UDim.new(0, 8),
+            backgroundColor = Colors.Paper,
             onClick = function()
                 showLeaderboard()
-            end
-        }
+            end,
+        },
     }
-    
-    for _, buttonConfig in ipairs(buttons) do
-        buttonConfig.parent = centerPanel
-        buttonConfig.textSize = 24
+
+    for index, buttonConfig in ipairs(buttons) do
+        buttonConfig.parent = buttonList
+        buttonConfig.size = UDim2.new(1, 0, 0, 78)
+        buttonConfig.textSize = 32
+        buttonConfig.depth = 6
+        buttonConfig.layoutOrder = index
         UI.createButton(buttonConfig)
     end
 
+    -- 左下角玩家名牌
+    local badge = UI.createPanel({
+        name = "PlayerBadge",
+        parent = stage,
+        anchorPoint = Vector2.new(0, 1),
+        position = UDim2.new(0, 24, 1, -20),
+        size = UDim2.new(0, 280, 0, 70),
+        depth = 4,
+        cornerRadius = UDim.new(0, 35),
+    })
+    UI.createAvatarImage({
+        parent = badge,
+        userId = LocalPlayer.UserId,
+        position = UDim2.new(0, 6, 0, 5),
+        size = UDim2.new(0, 56, 0, 56),
+        zIndex = 3,
+    })
+    UI.createLabel({
+        name = "PlayerName",
+        parent = badge,
+        text = LocalPlayer.DisplayName,
+        position = UDim2.new(0, 72, 0, 8),
+        size = UDim2.new(1, -90, 0, 26),
+        textSize = 20,
+        font = Fonts.Bold,
+        textXAlignment = Enum.TextXAlignment.Left,
+        truncate = true,
+        textWrapped = false,
+        zIndex = 3,
+    })
+    UI.createLabel({
+        name = "PlayerHandle",
+        parent = badge,
+        text = "@" .. LocalPlayer.Name,
+        position = UDim2.new(0, 72, 0, 34),
+        size = UDim2.new(1, -90, 0, 20),
+        textSize = 15,
+        textColor = Colors.InkSoft,
+        textXAlignment = Enum.TextXAlignment.Left,
+        truncate = true,
+        textWrapped = false,
+        zIndex = 3,
+    })
+
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    print("Main menu created")
 end
 
--- 显示房间列表
+-- ===============================
+-- 房间列表
+-- ===============================
+
+local MAX_LIST_AVATARS = 5
+
+-- 创建房间列表项
+local function createRoomListItem(parent, roomData, index)
+    local isFull = roomData.playerCount >= roomData.maxPlayers
+
+    local roomItem = UI.createFrame({
+        name = "RoomItem",
+        parent = parent,
+        size = UDim2.new(1, -8, 0, 88),
+        backgroundColor = index % 2 == 0 and Colors.PaperDark or Colors.Paper,
+        corner = true,
+        cornerRadius = UDim.new(0, 12),
+        stroke = true,
+        layoutOrder = index,
+    })
+
+    -- 房间名称与房主
+    local infoFrame = UI.createFrame({
+        name = "InfoFrame",
+        parent = roomItem,
+        size = UDim2.new(0.38, 0, 1, 0),
+        position = UDim2.new(0, 18, 0, 0),
+        backgroundTransparency = 1,
+    })
+    UI.createLabel({
+        name = "NameLabel",
+        text = roomData.name,
+        parent = infoFrame,
+        size = UDim2.new(1, 0, 0, 30),
+        position = UDim2.new(0, 0, 0, 14),
+        textSize = 24,
+        font = Fonts.Display,
+        textXAlignment = Enum.TextXAlignment.Left,
+        truncate = true,
+        textWrapped = false,
+    })
+    local hostName = roomData.host and (roomData.host.displayName or roomData.host.name) or "—"
+    UI.createLabel({
+        name = "HostLabel",
+        text = "Host: " .. hostName,
+        parent = infoFrame,
+        size = UDim2.new(1, 0, 0, 22),
+        position = UDim2.new(0, 0, 0, 48),
+        textSize = 17,
+        textColor = Colors.InkSoft,
+        textXAlignment = Enum.TextXAlignment.Left,
+        truncate = true,
+        textWrapped = false,
+    })
+
+    -- 玩家头像，房主头像用蜂蜜色描边
+    local avatarFrame = UI.createFrame({
+        name = "AvatarFrame",
+        parent = roomItem,
+        size = UDim2.new(0, 260, 0, 52),
+        position = UDim2.new(0.42, 0, 0.5, -26),
+        backgroundTransparency = 1,
+    })
+    UI.addList(avatarFrame, {
+        direction = Enum.FillDirection.Horizontal,
+        padding = -10,
+        verticalAlignment = Enum.VerticalAlignment.Center,
+    })
+    for i, playerData in ipairs(roomData.players) do
+        if i > MAX_LIST_AVATARS then
+            UI.createPill({
+                name = "MoreLabel",
+                parent = avatarFrame,
+                text = "+" .. (#roomData.players - MAX_LIST_AVATARS),
+                size = UDim2.new(0, 52, 0, 30),
+                layoutOrder = i,
+            })
+            break
+        end
+        local avatar = UI.createAvatarImage({
+            parent = avatarFrame,
+            userId = playerData.userId,
+            size = UDim2.new(0, 50, 0, 50),
+            layoutOrder = i,
+            zIndex = MAX_LIST_AVATARS - i + 2,
+        })
+        if roomData.host and playerData.userId == roomData.host.userId then
+            UI.setAvatarRing(avatar, Colors.HoneyDark, 3)
+        end
+    end
+
+    -- 人数
+    UI.createPill({
+        name = "PlayerCountLabel",
+        parent = roomItem,
+        text = string.format("%d / %d", roomData.playerCount, roomData.maxPlayers),
+        anchorPoint = Vector2.new(1, 0.5),
+        position = UDim2.new(1, -170, 0.5, 0),
+        size = UDim2.new(0, 84, 0, 32),
+        textSize = 18,
+        backgroundColor = isFull and Colors.PaperDeep or Colors.Honey,
+    })
+
+    -- 加入按钮
+    local joinButton = UI.createButton({
+        name = "JoinButton",
+        parent = roomItem,
+        anchorPoint = Vector2.new(1, 0.5),
+        position = UDim2.new(1, -16, 0.5, 2),
+        size = UDim2.new(0, 136, 0, 58),
+        textSize = 24,
+        text = isFull and "Full" or "Join",
+        backgroundColor = Colors.Blue,
+        onClick = function()
+            RoomJoinRequest:FireServer(roomData.id)
+        end,
+    })
+    if isFull then
+        UI.setButtonEnabled(joinButton, false)
+    end
+end
+
 function showRoomList()
     cleanupCurrentUI()
-    
-    local screenGui = UI.createScreen("RoomListGui")
+
+    local screenGui, stage = createScreenRoot("RoomListGui")
     currentUI = screenGui
-    
-    local backgroundFrame = UI.createBackground(screenGui)
-    UI.createTitle("Room List", backgroundFrame)
-    
-    -- 房间列表容器
+
+    local subtitle = createPageHeading(stage, "Room List", "Loading rooms...")
+
+    local listPanel = UI.createPanel({
+        name = "ListPanel",
+        parent = stage,
+        anchorPoint = Vector2.new(0.5, 0),
+        position = UDim2.new(0.5, 0, 0, 128),
+        size = UDim2.new(0, 900, 1, -250),
+    })
+
     local listFrame = UI.createScrollingFrame({
         name = "RoomListFrame",
-        parent = backgroundFrame,
-        size = UDim2.new(0.8, 0, 0.6, 0),
-        position = UDim2.new(0.1, 0, 0.2, 0),
+        parent = listPanel,
+        size = UDim2.new(1, -24, 1, -24),
+        position = UDim2.new(0, 12, 0, 12),
+        backgroundTransparency = 1,
         listLayout = true,
-        corner = true,
-        cornerRadius = UDim.new(0, 8)
+        listPadding = UDim.new(0, 10),
+        zIndex = 3,
     })
-    
-    -- 创建房间列表项
-    local function createRoomListItem(parent, roomData, index)
-        local roomItem = UI.createFrame({
-            name = "RoomItem",
-            parent = parent,
-            size = UDim2.new(1, 0, 0, 80),
-            backgroundColor = Color3.fromRGB(50, 50, 60),
-            borderSize = 1,
-            borderColor = UI.Colors.BorderAccent,
-            corner = true
-        })
-        roomItem.LayoutOrder = index
-        
-        -- 房间信息区域
-        local infoFrame = UI.createFrame({
-            name = "InfoFrame",
-            parent = roomItem,
-            size = UDim2.new(0.35, 0, 1, 0),
-            position = UDim2.new(0.02, 0, 0, 0),
-            backgroundTransparency = 1,
-            corner = true
-        })
-        
-        -- 房间名称
+    UI.addPadding(listFrame, 4, 4)
+
+    local function showListMessage(name, text, color)
         UI.createLabel({
-            name = "NameLabel",
-            text = roomData.name,
-            parent = infoFrame,
-            size = UDim2.new(1, 0, 0.5, 0),
-            position = UDim2.new(0, 0, 0.1, 0),
-            textSize = 16,
-            textXAlignment = Enum.TextXAlignment.Left,
-            textYAlignment = Enum.TextYAlignment.Center,
-            transparent = true,
+            name = name,
+            text = text,
+            parent = listFrame,
+            size = UDim2.new(1, 0, 0, 120),
+            textSize = 24,
+            font = Fonts.Bold,
+            textColor = color,
         })
-        
-        -- 玩家数量
-        UI.createLabel({
-            name = "PlayerCountLabel",
-            text = string.format("Players: %d/%d", roomData.playerCount, roomData.maxPlayers),
-            parent = infoFrame,
-            size = UDim2.new(1, 0, 0.4, 0),
-            position = UDim2.new(0, 0, 0.5, 0),
-            textSize = 12,
-            textColor = UI.Colors.TextGray,
-            textXAlignment = Enum.TextXAlignment.Left,
-            textYAlignment = Enum.TextYAlignment.Center,
-            transparent = true
-        })
-        
-        -- 玩家头像区域
-        local avatarFrame = UI.createFrame({
-            name = "AvatarFrame",
-            parent = roomItem,
-            size = UDim2.new(0.4, 0, 1, 0),
-            position = UDim2.new(0.37, 0, 0, 0),
-            backgroundTransparency = 1
-        })
-        
-        -- 显示房间内玩家头像（最多显示2个）
-        for i, playerData in ipairs(roomData.players) do
-            if i <= 2 then
-                local avatarContainer = UI.createAvatarImage({
-                    parent = avatarFrame,
-                    userId = playerData.userId,
-                })
-                avatarContainer.Size = UDim2.new(0, 40, 0, 40)
-                avatarContainer.Position = UDim2.new((i-1) * 0.5, 5, 0.5, -20)
-                
-                -- 如果是房主,添加特殊边框颜色
-                if roomData.host and playerData.userId == roomData.host.userId then
-                    local background = avatarContainer:FindFirstChild("AvatarBackground")
-                    if background then
-                        background.BorderColor3 = UI.Colors.TextYellow
-                    end
-                end
-            end
-        end
-        
-        -- 加入按钮
-        local joinButtonConfig = {
-            name = "JoinButton",
-            parent = roomItem,
-            size = UDim2.new(0.18, 0, 0.6, 0),
-            position = UDim2.new(0.8, 0, 0.2, 0),
-            textSize = 16,
-            corner = true,
-            cornerRadius = UDim.new(0, 6)
-        }
-        
-        if roomData.playerCount >= roomData.maxPlayers then
-            joinButtonConfig.text = "Full"
-            joinButtonConfig.backgroundColor = UI.Colors.ButtonDisabled
-        else
-            joinButtonConfig.text = "Join"
-            joinButtonConfig.backgroundColor = UI.Colors.ButtonBlue
-            joinButtonConfig.onClick = function()
-                RoomJoinRequest:FireServer(roomData.id)
-            end
-        end
-        
-        UI.createButton(joinButtonConfig)
     end
 
     -- 刷新房间列表
     local function refreshRoomList()
-        -- 清空现有列表
         for _, child in ipairs(listFrame:GetChildren()) do
-            if child:IsA("Frame") or child.Name == "NoRoomsLabel" or child.Name == "ErrorLabel" then
+            if child:IsA("GuiObject") then
                 child:Destroy()
             end
         end
-        
-        -- 获取并显示新列表
+
         local success, roomList = pcall(function()
             return GetRoomList:Invoke()
         end)
-        
+        if not listFrame.Parent then
+            return
+        end
+
         if success and roomList then
             if #roomList == 0 then
-                UI.createLabel({
-                    name = "NoRoomsLabel",
-                    text = "No available rooms. Why not create one?",
-                    parent = listFrame,
-                    size = UDim2.new(1, 0, 0, 50),
-                    textSize = 18,
-                    textColor = UI.Colors.TextGray,
-                    transparent = true
-                })
+                subtitle.Text = "No open rooms"
+                showListMessage("NoRoomsLabel", "No available rooms. Why not create one?", Colors.InkSoft)
             else
+                subtitle.Text = string.format("%d room%s open", #roomList, #roomList == 1 and "" or "s")
                 for i, roomData in ipairs(roomList) do
                     createRoomListItem(listFrame, roomData, i)
                 end
             end
         else
-            UI.createLabel({
-                name = "ErrorLabel",
-                text = "Error loading rooms.",
-                parent = listFrame,
-                size = UDim2.new(1, 0, 0, 50),
-                textSize = 18,
-                textColor = UI.Colors.TextError,
-                transparent = true
-            })
+            subtitle.Text = "Could not reach the server"
+            showListMessage("ErrorLabel", "Error loading rooms.", Colors.TextError)
             warn("Failed to get room list:", roomList)
         end
-        
-        -- 更新滚动区域大小
-        listFrame.CanvasSize = UDim2.new(0, 0, 0, listFrame.UIListLayout.AbsoluteContentSize.Y)
     end
-    
-    -- 返回和刷新按钮
+
+    -- 底部按钮
     local bottomFrame = UI.createFrame({
         name = "BottomFrame",
-        parent = backgroundFrame,
-        size = UDim2.new(0.8, 0, 0.1, 0),
-        position = UDim2.new(0.1, 0, 0.82, 0),
-        backgroundTransparency = 1
+        parent = stage,
+        anchorPoint = Vector2.new(0.5, 1),
+        position = UDim2.new(0.5, 0, 1, -28),
+        size = UDim2.new(0, 900, 0, 70),
+        backgroundTransparency = 1,
     })
-    
+
     UI.createButton({
         name = "BackButton",
         text = "Back",
         parent = bottomFrame,
-        size = UDim2.new(0.4, 0, 0.8, 0),
-        position = UDim2.new(0.05, 0, 0.1, 0),
-        backgroundColor = UI.Colors.ButtonGray,
-        cornerRadius = UDim.new(0, 6),
-        onClick = createMainMenu
+        size = UDim2.new(0, 220, 1, 0),
+        backgroundColor = Colors.Paper,
+        onClick = createMainMenu,
     })
-    
+
     UI.createButton({
         name = "RefreshButton",
         text = "Refresh",
         parent = bottomFrame,
-        size = UDim2.new(0.4, 0, 0.8, 0),
-        position = UDim2.new(0.55, 0, 0.1, 0),
-        backgroundColor = UI.Colors.ButtonBlue,
-        cornerRadius = UDim.new(0, 6),
-        onClick = refreshRoomList
+        anchorPoint = Vector2.new(1, 0),
+        position = UDim2.new(1, 0, 0, 0),
+        size = UDim2.new(0, 220, 1, 0),
+        backgroundColor = Colors.Blue,
+        onClick = refreshRoomList,
     })
-    
+
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    
-    -- 首次加载
+
     refreshRoomList()
 end
 
--- 创建通用的玩家卡片函数
-local function createPlayerCard(parent, playerData, index, isHost)
-    local playerCard = UI.createFrame({
-        name = "PlayerCard",
-        parent = parent,
-        size = UDim2.new(0, 220, 1, -20),
-        position = UDim2.new(0, 30 + (index - 1) * 250, 0, 10),
-        backgroundColor = Color3.fromRGB(50, 50, 60),
-        borderSize = 2,
-        borderColor = isHost and UI.Colors.TextYellow or UI.Colors.BorderAccent,
-        corner = true
-    })
-    
-    -- 房主标识
-    if isHost then
-        UI.createLabel({
-            name = "HostLabel",
-            text = "Host",
-            parent = playerCard,
-            size = UDim2.new(1, -10, 0, 25),
-            position = UDim2.new(0, 5, 0, 5),
-            textSize = 14,
-            textColor = UI.Colors.TextYellow,
-            transparent = true
-        })
-    end
-    
-    -- 头像容器
-    local avatarContainer = UI.createAvatarImage({
-        parent = playerCard,
-        userId = playerData.userId,
-    })
-    avatarContainer.Position = UDim2.new(0.5, -60, 0, 35)
-    avatarContainer.Size = UDim2.new(0, 120, 0, 120)
-    
-    -- 玩家名称
-    UI.createLabel({
-        name = "NameLabel",
-        text = playerData.displayName,
-        parent = playerCard,
-        size = UDim2.new(1, -10, 0, 25),
-        position = UDim2.new(0, 5, 1, -70),
-        textSize = 16,
-        textWrapped = true,
-        transparent = true
-    })
-    
-    -- 准备状态（非房主）
-    if not isHost then
-        UI.createLabel({
-            name = "ReadyLabel",
-            text = playerData.isReady and "✓ Ready" or "⏸ Not Ready",
-            parent = playerCard,
-            size = UDim2.new(1, -10, 0, 25),
-            position = UDim2.new(0, 5, 1, -30),
-            textSize = 16,
-            textColor = playerData.isReady and UI.Colors.TextGreen or UI.Colors.TextYellow,
-            transparent = true
-        })
-    end
+-- ===============================
+-- 房间内界面
+-- ===============================
+
+local function isRoomHost(roomData, userId)
+    return roomData.host ~= nil and roomData.host.userId == userId
 end
 
--- 显示房间内界面
+-- 玩家座位卡片
+local function createPlayerCard(parent, playerData, index, isHost)
+    local card = UI.createFrame({
+        name = "PlayerCard",
+        parent = parent,
+        backgroundColor = Colors.Paper,
+        corner = true,
+        cornerRadius = UDim.new(0, 14),
+        layoutOrder = index,
+    })
+    UI.addStroke(card, isHost and 4 or 2, isHost and Colors.HoneyDark or Colors.Outline)
+
+    -- 房主标识
+    if isHost then
+        UI.createPill({
+            name = "HostLabel",
+            parent = card,
+            text = "★ Host",
+            anchorPoint = Vector2.new(0.5, 0.5),
+            position = UDim2.new(0.5, 0, 0, 0),
+            size = UDim2.new(0, 92, 0, 28),
+            backgroundColor = Colors.Honey,
+            zIndex = 3,
+        })
+    end
+
+    -- 头像位于卡片正中，名字在上，准备状态在下
+    local avatar = UI.createAvatarImage({
+        parent = card,
+        userId = playerData.userId,
+        anchorPoint = Vector2.new(0.5, 0.5),
+        position = UDim2.new(0.5, 0, 0.5, 0),
+        size = UDim2.new(0.7, 0, 0.48, 0),
+        strokeThickness = 3,
+    })
+    if playerData.userId == LocalPlayer.UserId then
+        UI.setAvatarRing(avatar, Colors.Blue, 4)
+    end
+
+    UI.createLabel({
+        name = "NameLabel",
+        text = playerData.displayName .. (playerData.userId == LocalPlayer.UserId and " (You)" or ""),
+        parent = card,
+        anchorPoint = Vector2.new(0.5, 1),
+        position = UDim2.new(0.5, 0, 0.25, -2),
+        size = UDim2.new(1, -16, 0.14, 0),
+        textSize = 20,
+        font = Fonts.Bold,
+        textScaled = true,
+    })
+
+    -- 准备状态；房主无需准备，视为已准备
+    local readyText, readyColor
+    if isHost or playerData.isReady then
+        readyText, readyColor = "✓ Ready", Colors.Green
+    else
+        readyText, readyColor = "Not Ready", Colors.PaperDeep
+    end
+    UI.createPill({
+        name = "ReadyLabel",
+        parent = card,
+        text = readyText,
+        anchorPoint = Vector2.new(0.5, 0),
+        position = UDim2.new(0.5, 0, 0.75, 6),
+        size = UDim2.new(0.7, 0, 0, 30),
+        textSize = 17,
+        backgroundColor = readyColor,
+    })
+end
+
+-- 空座位
+local function createEmptySeat(parent, index)
+    local seat = UI.createFrame({
+        name = "EmptySeat",
+        parent = parent,
+        backgroundColor = Colors.PaperDark,
+        backgroundTransparency = 0.35,
+        corner = true,
+        cornerRadius = UDim.new(0, 14),
+        layoutOrder = index,
+    })
+    UI.addStroke(seat, 2, Colors.InkSoft, 0.5)
+    UI.createLabel({
+        name = "SeatLabel",
+        parent = seat,
+        text = "Open Seat",
+        textSize = 20,
+        font = Fonts.Bold,
+        textColor = Colors.InkSoft,
+    })
+end
+
 function showRoomInterface(roomData)
     cleanupCurrentUI()
     currentRoomData = roomData
-    
-    local screenGui = UI.createScreen("RoomInterfaceGui")
+
+    local screenGui, stage = createScreenRoot("RoomInterfaceGui")
     currentUI = screenGui
-    
-    local backgroundFrame = UI.createBackground(screenGui)
-    UI.createTitle("Room: " .. roomData.name, backgroundFrame, nil, UDim2.new(0, 0, 0.05, 0))
-    
-    -- 玩家列表容器
-    local playersFrame = UI.createFrame({
+
+    local subtitle = createPageHeading(stage, "Room: " .. roomData.name, "")
+
+    -- 玩家座位面板
+    local playersPanel = UI.createPanel({
         name = "PlayersFrame",
-        parent = backgroundFrame,
-        size = UDim2.new(0.8, 0, 0.5, 0),
-        position = UDim2.new(0.1, 0, 0.2, 0),
-        borderSize = 2,
-        borderColor = UI.Colors.Border,
-        corner = true
+        parent = stage,
+        anchorPoint = Vector2.new(0.5, 0),
+        position = UDim2.new(0.5, 0, 0, 130),
+        size = UDim2.new(0, 1000, 1, -260),
     })
-    
-    -- 按钮容器
+
+    local seatsFrame = UI.createFrame({
+        name = "Seats",
+        parent = playersPanel,
+        size = UDim2.new(1, -40, 1, -44),
+        position = UDim2.new(0, 20, 0, 26),
+        backgroundTransparency = 1,
+        zIndex = 3,
+    })
+    local maxSeats = math.max(roomData.maxPlayers or Config.game.maxPlayers, 1)
+    local columns = math.min(maxSeats, 4)
+    local rows = math.ceil(maxSeats / columns)
+    local grid = Instance.new("UIGridLayout")
+    grid.CellPadding = UDim2.new(0, 18, 0, 22)
+    grid.CellSize = UDim2.new(1 / columns, -18, 1 / rows, -22)
+    grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    grid.VerticalAlignment = Enum.VerticalAlignment.Center
+    grid.SortOrder = Enum.SortOrder.LayoutOrder
+    grid.Parent = seatsFrame
+
+    -- 底部按钮
     local buttonFrame = UI.createFrame({
         name = "ButtonFrame",
-        parent = backgroundFrame,
-        size = UDim2.new(0.8, 0, 0.15, 0),
-        position = UDim2.new(0.1, 0, 0.75, 0),
-        backgroundTransparency = 1
+        parent = stage,
+        anchorPoint = Vector2.new(0.5, 1),
+        position = UDim2.new(0.5, 0, 1, -28),
+        size = UDim2.new(0, 1000, 0, 74),
+        backgroundTransparency = 1,
     })
-    
-    -- 按钮配置
-    local buttons = {
-        leave = {
-            name = "LeaveButton",
-            text = "Leave Room",
-            size = UDim2.new(0.25, 0, 0.8, 0),
-            position = UDim2.new(0, 0, 0.1, 0),
-            backgroundColor = UI.Colors.ButtonRed,
-            corner = true,
-            cornerRadius = UDim.new(0, 6),
-            onClick = function()
-                print("Leaving room")
-                RoomLeaveRequest:FireServer()
-                createMainMenu()
+
+    local leaveButton = UI.createButton({
+        name = "LeaveButton",
+        text = "Leave Room",
+        parent = buttonFrame,
+        size = UDim2.new(0, 230, 1, 0),
+        backgroundColor = Colors.Red,
+        onClick = function()
+            RoomLeaveRequest:FireServer()
+            createMainMenu()
+        end,
+    })
+    leaveButton:SetAttribute("buttonType", "leave")
+
+    local readyButton = UI.createButton({
+        name = "ReadyButton",
+        text = "Ready",
+        parent = buttonFrame,
+        anchorPoint = Vector2.new(0.5, 0),
+        position = UDim2.new(0.5, 0, 0, 0),
+        size = UDim2.new(0, 300, 1, 0),
+        backgroundColor = Colors.Green,
+        onClick = function()
+            RoomPlayerReady:FireServer()
+        end,
+    })
+    readyButton:SetAttribute("buttonType", "ready")
+
+    local startButton = UI.createButton({
+        name = "StartButton",
+        text = "Start Game",
+        parent = buttonFrame,
+        anchorPoint = Vector2.new(1, 0),
+        position = UDim2.new(1, 0, 0, 0),
+        size = UDim2.new(0, 330, 1, 0),
+        backgroundColor = Colors.Green,
+        textScaled = true,
+        onClick = function()
+            if currentRoomData and isRoomHost(currentRoomData, LocalPlayer.UserId) then
+                RoomStartGame:FireServer(currentRoomData.id)
             end
-        },
-        start = {
-            name = "StartButton",
-            text = "Start Game",
-            size = UDim2.new(0.3, 0, 0.8, 0),
-            position = UDim2.new(0.7, 0, 0.1, 0),
-            backgroundColor = UI.Colors.ButtonGreen,
-            corner = true,
-            cornerRadius = UDim.new(0, 6),
-            onClick = function()
-                if currentRoomData and currentRoomData.host and currentRoomData.host.userId == LocalPlayer.UserId then
-                    print("Starting game")
-                    RoomStartGame:FireServer(currentRoomData.id)
-                end
-            end
-        },
-        ready = {
-            name = "ReadyButton",
-            text = "Ready",
-            size = UDim2.new(0.3, 0, 0.8, 0),
-            position = UDim2.new(0.35, 0, 0.1, 0),
-            backgroundColor = UI.Colors.ButtonGreen,
-            corner = true,
-            cornerRadius = UDim.new(0, 6),
-            onClick = function()
-                print("Toggling ready status from room interface")
-                RoomPlayerReady:FireServer()
-            end
-        }
-    }
-    
-    -- 创建按钮
-    for key, config in pairs(buttons) do
-        config.parent = buttonFrame
-        local button = UI.createButton(config)
-        button:SetAttribute("buttonType", key)
-    end
-    
-    -- 更新玩家显示
-    local function updatePlayerDisplay(roomData)
-        -- 清空现有玩家显示
-        for _, child in ipairs(playersFrame:GetChildren()) do
-            if child:IsA("Frame") and child.Name == "PlayerCard" then
+        end,
+    })
+    startButton:SetAttribute("buttonType", "start")
+
+    -- 更新玩家与按钮
+    local function updatePlayerDisplay(data)
+        for _, child in ipairs(seatsFrame:GetChildren()) do
+            if child:IsA("GuiObject") then
                 child:Destroy()
             end
         end
-        
-        -- 创建玩家卡片
-        for i, playerData in ipairs(roomData.players) do
-            createPlayerCard(playersFrame, playerData, i, roomData.host and playerData.userId == roomData.host.userId)
+
+        for i, playerData in ipairs(data.players) do
+            createPlayerCard(seatsFrame, playerData, i, isRoomHost(data, playerData.userId))
         end
-        
-        -- 更新按钮状态
-        local startButton = buttonFrame:FindFirstChild("StartButton")
-        local readyButton = buttonFrame:FindFirstChild("ReadyButton")
-        
-        if startButton then
-            local isHost = roomData.host and roomData.host.userId == LocalPlayer.UserId
-            local hasEnoughPlayers = #roomData.players >= Config.game.minPlayers
-            
-            -- 检查所有非房主玩家是否都已准备
-            local allPlayersReady = true
-            local notReadyCount = 0
-            if hasEnoughPlayers then
-                for _, playerData in ipairs(roomData.players) do
-                    if roomData.host and playerData.userId ~= roomData.host.userId then
-                        if not playerData.isReady then
-                            allPlayersReady = false
-                            notReadyCount = notReadyCount + 1
-                        end
-                    end
-                end
-            end
-            
-            local canStart = isHost and hasEnoughPlayers and allPlayersReady
-            
-            startButton.Visible = isHost
-            UI.setButtonEnabled(startButton, canStart)
-            
-            if isHost then
-                if not hasEnoughPlayers then
-                    startButton:FindFirstChild("ButtonLabel").Text = string.format("Need %d players", Config.game.minPlayers)
-                elseif not allPlayersReady then
-                    startButton:FindFirstChild("ButtonLabel").Text = string.format("Waiting for %d players to be ready", notReadyCount)
-                else
-                    startButton:FindFirstChild("ButtonLabel").Text = "Start Game"
-                end
+        for i = #data.players + 1, maxSeats do
+            createEmptySeat(seatsFrame, i)
+        end
+
+        subtitle.Text = string.format("%d / %d players", #data.players, data.maxPlayers or maxSeats)
+
+        local isHost = isRoomHost(data, LocalPlayer.UserId)
+        local hasEnoughPlayers = #data.players >= Config.game.minPlayers
+
+        -- 统计未准备的非房主玩家
+        local notReadyCount = 0
+        for _, playerData in ipairs(data.players) do
+            if not isRoomHost(data, playerData.userId) and not playerData.isReady then
+                notReadyCount = notReadyCount + 1
             end
         end
-        
-        if readyButton then
-            local isLocalPlayerHost = roomData.host and roomData.host.userId == LocalPlayer.UserId
-            readyButton.Visible = not isLocalPlayerHost
-            
-            if not isLocalPlayerHost then
-                local localPlayerReady = false
-                for _, playerData in ipairs(roomData.players) do
-                    if playerData.userId == LocalPlayer.UserId then
-                        localPlayerReady = playerData.isReady or false
-                        break
-                    end
-                end
-                
-                readyButton:FindFirstChild("ButtonLabel").Text = localPlayerReady and "Cancel Ready" or "Ready"
-                UI.styleButton(readyButton, localPlayerReady and "danger" or "success")
+        local allPlayersReady = notReadyCount == 0
+
+        startButton.Visible = isHost
+        UI.setButtonEnabled(startButton, isHost and hasEnoughPlayers and allPlayersReady)
+        if isHost then
+            if not hasEnoughPlayers then
+                UI.setButtonText(startButton, string.format("Need %d players", Config.game.minPlayers))
+            elseif not allPlayersReady then
+                UI.setButtonText(startButton, string.format("Waiting for %d players to be ready", notReadyCount))
+            else
+                UI.setButtonText(startButton, "Start Game")
             end
+        end
+
+        readyButton.Visible = not isHost
+        if not isHost then
+            local localPlayerReady = false
+            for _, playerData in ipairs(data.players) do
+                if playerData.userId == LocalPlayer.UserId then
+                    localPlayerReady = playerData.isReady or false
+                    break
+                end
+            end
+            UI.setButtonText(readyButton, localPlayerReady and "Cancel Ready" or "Ready")
+            UI.styleButton(readyButton, localPlayerReady and "danger" or "success")
         end
     end
-    
+
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
     updatePlayerDisplay(roomData)
-    
-    print("Room interface created for room:", roomData.name)
+    updateRoomDisplay = updatePlayerDisplay
+
     return updatePlayerDisplay
 end
 
--- 监听房间玩家更新事件
+-- ===============================
+-- 事件
+-- ===============================
+
+-- 房间玩家更新：已在房间界面时就地刷新，否则说明刚加入房间
 RoomPlayerUpdate:Connect(function(roomData)
-    print("Room player update received:", roomData)
-    
-    if currentUI and currentUI.Name == "RoomInterfaceGui" then
+    if currentUI and currentUI.Name == "RoomInterfaceGui" and updateRoomDisplay then
         currentRoomData = roomData
-        -- 查找并调用更新函数
-        local playersFrame = currentUI.BackgroundFrame:FindFirstChild("PlayersFrame")
-        local buttonFrame = currentUI.BackgroundFrame:FindFirstChild("ButtonFrame")
-        local startButton = buttonFrame and buttonFrame:FindFirstChild("StartButton")
-        local readyButton = buttonFrame and buttonFrame:FindFirstChild("ReadyButton")
-        
-        if playersFrame then
-            -- 清空现有玩家显示
-            for _, child in ipairs(playersFrame:GetChildren()) do
-                if child:IsA("Frame") and child.Name == "PlayerCard" then
-                    child:Destroy()
-                end
-            end
-            
-            -- 使用通用的createPlayerCard函数创建玩家卡片
-            for i, playerData in ipairs(roomData.players) do
-                local isHost = roomData.host and playerData.userId == roomData.host.userId
-                createPlayerCard(playersFrame, playerData, i, isHost)
-            end
-            
-            -- 更新开始游戏按钮状态
-            if startButton then
-                local isHost = roomData.host and roomData.host.userId == LocalPlayer.UserId
-                local hasEnoughPlayers = #roomData.players >= 2
-                
-                -- 检查所有非房主玩家是否都已准备
-                local allPlayersReady = true
-                local notReadyCount = 0
-                if hasEnoughPlayers then
-                    for _, playerData in ipairs(roomData.players) do
-                        if roomData.host and playerData.userId ~= roomData.host.userId then
-                            if not playerData.isReady then
-                                allPlayersReady = false
-                                notReadyCount = notReadyCount + 1
-                            end
-                        end
-                    end
-                end
-                
-                local canStart = isHost and hasEnoughPlayers and allPlayersReady
-                
-                startButton.Visible = isHost
-                UI.setButtonEnabled(startButton, canStart)
-                
-                if isHost then
-                    if not hasEnoughPlayers then
-                        startButton:FindFirstChild("ButtonLabel").Text = string.format("Need %d players", 2)
-                    elseif not allPlayersReady then
-                        startButton:FindFirstChild("ButtonLabel").Text = string.format("Waiting for %d players to be ready", notReadyCount)
-                    else
-                        startButton:FindFirstChild("ButtonLabel").Text = "Start Game"
-                    end
-                end
-            end
-            
-            -- 更新准备按钮状态
-            if readyButton then
-                local isLocalPlayerHost = roomData.host and roomData.host.userId == LocalPlayer.UserId
-                readyButton.Visible = not isLocalPlayerHost
-                
-                if not isLocalPlayerHost then
-                    -- 查找本地玩家的准备状态
-                    local localPlayerReady = false
-                    for _, playerData in ipairs(roomData.players) do
-                        if playerData.userId == LocalPlayer.UserId then
-                            localPlayerReady = playerData.isReady or false
-                            break
-                        end
-                    end
-                    
-                    readyButton:FindFirstChild("ButtonLabel").Text = localPlayerReady and "Cancel Ready" or "Ready"
-                    UI.styleButton(readyButton, localPlayerReady and "danger" or "success")
-                end
-            end
-        end
+        updateRoomDisplay(roomData)
     else
-        -- 如果不在房间界面，但收到房间更新，说明成功加入了房间
         showRoomInterface(roomData)
     end
 end)
 
--- 监听比赛开始事件
+-- 比赛开始
 MatchStarted:Connect(function(data)
-    print("MatchStarted event received:", data)
-    
     if not data then
-        print("Error: MatchStarted received nil data")
+        warn("MatchStarted received nil data")
         return
     end
-    
-    -- Hide room GUI if present
+
     cleanupCurrentUI()
     currentRoomData = nil
-    
+
     if not data.matchId or not data.playerUserId or not data.opponentUserIds then
-        print("Error: Invalid match data received")
+        warn("Invalid match data received")
         return
     end
-    
-    print("Setting up match:", data.matchId, "Player:", data.playerUserId, "vs Opponents:", table.concat(data.opponentUserIds, ", "))
+
     ClientMatchState.SetMatchId(data.matchId)
     ClientMatchState.SetPlayerUserIds(data.playerUserId, data.opponentUserIds)
 end)
 
--- 监听排行榜关闭事件
+-- 排行榜关闭后回到主菜单
 local LeaderboardClosed = SignalManager.GetBindable("LeaderboardClosed")
--- 直接连接事件监听器
 LeaderboardClosed:Connect(function()
-    print("Leaderboard closed, returning to main menu")
     createMainMenu()
 end)
 
--- 监听返回房间响应事件
+-- 返回房间响应
 ReturnToRoomRequest:Connect(function(data)
-    print("Return to room response received:", data)
-    
     if data.type == "return_to_room" and data.roomData then
-        print("Returning to room after game:", data.roomData.name)
         currentRoomData = data.roomData
         showRoomInterface(data.roomData)
     elseif data.type == "return_to_main" then
-        print("Returning to main menu:", data.message or "Game finished")
-        -- 立即创建主菜单，避免GUI空档期
         createMainMenu()
-        
-        -- 如果有错误消息，异步显示并清理
         if data.message then
-            local msg = Instance.new("Message")
-            msg.Text = data.message
-            msg.Parent = LocalPlayer.PlayerGui
-            
-            -- 异步清理消息，不阻塞主线程
-            task.spawn(function()
-                task.wait(2)
-                if msg and msg.Parent then
-                    msg:Destroy()
-                end
-            end)
+            UI.showToast(data.message, "warning", 3)
         end
     else
-        print("Game finished, returning to main menu")
         createMainMenu()
     end
 end)
