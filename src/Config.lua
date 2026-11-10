@@ -26,8 +26,9 @@ local Config = {
         cooldownTime = 1,
     },
     leaderboard = {
-        maxEntries = 10,
-        updateInterval = 5,
+        maxEntries = 10, -- 排行榜显示的名次数（上限 100）
+        updateInterval = 60, -- 排行榜快照刷新间隔（秒，最小 10）
+        rankDepth = 1000, -- 计算个人排名时最多读取的名次数，超出显示为 "#1000+"
     }
 }
 

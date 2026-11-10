@@ -1,4 +1,4 @@
--- LeaderboardClient (ModuleScript) - 排行榜界面
+-- LeaderboardClient (ModuleScript) - 排行榜界面（胜场榜 / 最高分榜）
 
 local LeaderboardClient = {}
 
@@ -14,15 +14,6 @@ local Fonts = UI.Fonts
 -- 远程函数
 local GetLeaderboard = SignalManager.GetRemoteFunction("GetLeaderboard")
 local GetPlayerRank = SignalManager.GetRemoteFunction("GetPlayerRank")
-
--- 表格列：表头、宽度占比、对齐
-local COLUMNS = {
-    { key = "Rank", title = "Rank", width = 0.13 },
-    { key = "PlayerName", title = "Player", width = 0.39, align = Enum.TextXAlignment.Left },
-    { key = "Wins", title = "Wins", width = 0.15 },
-    { key = "Matches", title = "Matches", width = 0.15 },
-    { key = "WinRate", title = "Win Rate", width = 0.18 },
-}
 
 -- 前三名奖牌色
 local MEDAL_COLORS = {
@@ -56,11 +47,73 @@ local function normalizeEntry(data)
         totalWins = totalWins,
         totalMatches = totalMatches,
         winRatio = winRatio,
+        bestScore = tonumber(data.bestScore) or 0,
     }
 end
 
--- 我的排名中的单个数值块
-local function createStat(parent, name, title, order)
+-- 每张榜的显示方式：页签名、表格列、"我的排名"中的四个数值块
+local BOARD_ORDER = { "wins", "score" }
+local BOARD_VIEWS = {
+    wins = {
+        tab = "Wins",
+        empty = "No multiplayer wins recorded yet",
+        columns = {
+            { title = "Rank", width = 0.13 },
+            { title = "Player", width = 0.39, align = Enum.TextXAlignment.Left },
+            { title = "Wins", width = 0.15 },
+            { title = "Matches", width = 0.15 },
+            { title = "Win Rate", width = 0.18 },
+        },
+        values = function(entry)
+            return {
+                { "Wins", tostring(entry.totalWins) },
+                { "Matches", tostring(entry.totalMatches) },
+                { "WinRate", formatWinRate(entry.totalMatches, entry.winRatio) },
+            }
+        end,
+        stats = { "Rank", "Wins", "Matches", "Win Rate" },
+    },
+    score = {
+        tab = "High Score",
+        empty = "No scores recorded yet",
+        columns = {
+            { title = "Rank", width = 0.13 },
+            { title = "Player", width = 0.57, align = Enum.TextXAlignment.Left },
+            { title = "Best Score", width = 0.30 },
+        },
+        values = function(entry)
+            return {
+                { "BestScore", tostring(entry.bestScore) },
+            }
+        end,
+        stats = { "Rank", "Best Score", "Wins", "Win Rate" },
+    },
+}
+
+local function formatStat(statName, rankData, entry)
+    if statName == "Rank" then
+        local rank = tonumber(rankData.rank) or 0
+        local rankBeyond = tonumber(rankData.rankBeyond) or 0
+        if rank > 0 then
+            return "#" .. rank
+        elseif rankBeyond > 0 then
+            return "#" .. rankBeyond .. "+"
+        end
+        return "–"
+    elseif statName == "Wins" then
+        return tostring(entry.totalWins)
+    elseif statName == "Matches" then
+        return tostring(entry.totalMatches)
+    elseif statName == "Win Rate" then
+        return formatWinRate(entry.totalMatches, entry.winRatio)
+    elseif statName == "Best Score" then
+        return tostring(entry.bestScore)
+    end
+    return "–"
+end
+
+-- 我的排名中的单个数值块，返回 (标题, 数值) 两个标签
+local function createStat(parent, name, order)
     local tile = UI.createFrame({
         name = name,
         parent = parent,
@@ -71,17 +124,17 @@ local function createStat(parent, name, title, order)
         stroke = true,
         layoutOrder = order,
     })
-    UI.createLabel({
+    local title = UI.createLabel({
         name = "Title",
         parent = tile,
-        text = title,
+        text = "",
         position = UDim2.new(0, 0, 0, 8),
         size = UDim2.new(1, 0, 0, 20),
         textSize = 16,
         font = Fonts.Bold,
         textColor = Colors.InkSoft,
     })
-    return UI.createLabel({
+    local value = UI.createLabel({
         name = "Value",
         parent = tile,
         text = "–",
@@ -91,14 +144,20 @@ local function createStat(parent, name, title, order)
         font = Fonts.Display,
         textScaled = true,
     })
+    return title, value
 end
 
 -- 显示排行榜界面
-function LeaderboardClient.ShowLeaderboard()
+function LeaderboardClient.ShowLeaderboard(initialBoard)
     local existingGui = LocalPlayer.PlayerGui:FindFirstChild("LeaderboardGui")
     if existingGui then
         existingGui:Destroy()
     end
+
+    local currentBoard = BOARD_VIEWS[initialBoard] and initialBoard or BOARD_ORDER[1]
+    local requestToken = 0
+    -- 界面打开期间缓存每张榜的数据，切换页签不重复请求
+    local cache = {}
 
     local screenGui = UI.createScreen("LeaderboardGui")
     local stage = UI.createStage(screenGui)
@@ -108,13 +167,29 @@ function LeaderboardClient.ShowLeaderboard()
         name = "TitleLabel",
         parent = stage,
         text = "Leaderboard",
-        anchorPoint = Vector2.new(0.5, 0),
-        position = UDim2.new(0.5, 0, 0, 20),
-        size = UDim2.new(0, 600, 0, 60),
+        position = UDim2.new(0.5, -450, 0, 20),
+        size = UDim2.new(0, 420, 0, 60),
         textSize = 50,
         font = Fonts.Display,
         textColor = Colors.Paper,
+        textXAlignment = Enum.TextXAlignment.Left,
     })
+
+    -- 页签
+    local tabBar = UI.createFrame({
+        name = "Tabs",
+        parent = stage,
+        anchorPoint = Vector2.new(1, 0),
+        position = UDim2.new(0.5, 450, 0, 24),
+        size = UDim2.new(0, 400, 0, 56),
+        backgroundTransparency = 1,
+    })
+    UI.addList(tabBar, {
+        direction = Enum.FillDirection.Horizontal,
+        padding = 12,
+        horizontalAlignment = Enum.HorizontalAlignment.Right,
+    })
+    local tabButtons = {}
 
     local content = UI.createFrame({
         name = "Content",
@@ -149,7 +224,7 @@ function LeaderboardClient.ShowLeaderboard()
         font = Fonts.Display,
         textXAlignment = Enum.TextXAlignment.Left,
     })
-    -- 旧版的单行汇总文本，加载失败时显示错误
+    -- 玩家名；加载失败时显示错误
     local myRankInfo = UI.createLabel({
         name = "MyRankInfo",
         parent = myRankFrame,
@@ -170,10 +245,11 @@ function LeaderboardClient.ShowLeaderboard()
         backgroundTransparency = 1,
     })
     UI.addList(statsRow, { direction = Enum.FillDirection.Horizontal, padding = 12 })
-    local rankValue = createStat(statsRow, "RankStat", "Rank", 1)
-    local winsValue = createStat(statsRow, "WinsStat", "Wins", 2)
-    local matchesValue = createStat(statsRow, "MatchesStat", "Matches", 3)
-    local rateValue = createStat(statsRow, "WinRateStat", "Win Rate", 4)
+    local statTiles = {}
+    for i = 1, 4 do
+        local title, value = createStat(statsRow, "Stat" .. i, i)
+        statTiles[i] = { title = title, value = value }
+    end
 
     -- 排行榜表格
     local tablePanel = UI.createPanel({
@@ -191,20 +267,12 @@ function LeaderboardClient.ShowLeaderboard()
         backgroundColor = Colors.PaperDeep,
         corner = true,
     })
-    local x = 0
-    for i, column in ipairs(COLUMNS) do
-        UI.createLabel({
-            name = "Header" .. i,
-            parent = headerFrame,
-            text = column.title,
-            position = UDim2.new(x, column.align and 12 or 0, 0, 0),
-            size = UDim2.new(column.width, 0, 1, 0),
-            textSize = 18,
-            font = Fonts.Heavy,
-            textXAlignment = column.align or Enum.TextXAlignment.Center,
-        })
-        x = x + column.width
-    end
+    local headerColumns = UI.createFrame({
+        name = "Columns",
+        parent = headerFrame,
+        size = UDim2.new(1, 0, 1, 0),
+        backgroundTransparency = 1,
+    })
 
     local listFrame = UI.createScrollingFrame({
         name = "LeaderboardList",
@@ -217,7 +285,34 @@ function LeaderboardClient.ShowLeaderboard()
     })
     UI.addPadding(listFrame, 2, 0)
 
-    local function createLeaderboardEntry(data, index)
+    local function clearList()
+        for _, child in ipairs(listFrame:GetChildren()) do
+            if child:IsA("GuiObject") then
+                child:Destroy()
+            end
+        end
+    end
+
+    local function buildHeader(view)
+        headerColumns:ClearAllChildren()
+        local x = 0
+        for i, column in ipairs(view.columns) do
+            UI.createLabel({
+                name = "Header" .. i,
+                parent = headerColumns,
+                text = column.title,
+                position = UDim2.new(x, column.align and 12 or 0, 0, 0),
+                size = UDim2.new(column.width, 0, 1, 0),
+                textSize = 18,
+                font = Fonts.Heavy,
+                textXAlignment = column.align or Enum.TextXAlignment.Center,
+            })
+            x = x + column.width
+        end
+    end
+
+    local function createLeaderboardEntry(view, data, index)
+        local columns = view.columns
         local entry = normalizeEntry(data)
         local isMe = entry.userId == LocalPlayer.UserId
 
@@ -237,7 +332,7 @@ function LeaderboardClient.ShowLeaderboard()
             name = "RankCell",
             parent = entryFrame,
             position = UDim2.new(pos, 0, 0, 0),
-            size = UDim2.new(COLUMNS[1].width, 0, 1, 0),
+            size = UDim2.new(columns[1].width, 0, 1, 0),
             backgroundTransparency = 1,
         })
         local rank = UI.createLabel({
@@ -255,13 +350,13 @@ function LeaderboardClient.ShowLeaderboard()
             UI.addCorner(rank, UDim.new(1, 0))
             UI.addStroke(rank, 2, Colors.Outline)
         end
-        pos = pos + COLUMNS[1].width
+        pos = pos + columns[1].width
 
         local nameCell = UI.createFrame({
             name = "NameCell",
             parent = entryFrame,
             position = UDim2.new(pos, 0, 0, 0),
-            size = UDim2.new(COLUMNS[2].width, 0, 1, 0),
+            size = UDim2.new(columns[2].width, 0, 1, 0),
             backgroundTransparency = 1,
         })
         local nameOffset = 12
@@ -286,15 +381,10 @@ function LeaderboardClient.ShowLeaderboard()
             truncate = true,
             textWrapped = false,
         })
-        pos = pos + COLUMNS[2].width
+        pos = pos + columns[2].width
 
-        local values = {
-            { "Wins", tostring(entry.totalWins) },
-            { "Matches", tostring(entry.totalMatches) },
-            { "WinRate", formatWinRate(entry.totalMatches, entry.winRatio) },
-        }
-        for i, value in ipairs(values) do
-            local column = COLUMNS[i + 2]
+        for i, value in ipairs(view.values(entry)) do
+            local column = columns[i + 2]
             UI.createLabel({
                 name = value[1],
                 parent = entryFrame,
@@ -306,8 +396,6 @@ function LeaderboardClient.ShowLeaderboard()
             })
             pos = pos + column.width
         end
-
-        return entryFrame
     end
 
     local function showListMessage(name, text, color)
@@ -323,49 +411,123 @@ function LeaderboardClient.ShowLeaderboard()
         })
     end
 
-    local function loadLeaderboard()
-        local success, leaderboardData = pcall(function()
-            return GetLeaderboard:Invoke()
-        end)
-        if not listFrame.Parent then
-            return
-        end
-
-        if success and type(leaderboardData) == "table" then
-            if #leaderboardData == 0 then
-                showListMessage("EmptyState", "No leaderboard data available", Colors.InkSoft)
+    local function renderList(view, data)
+        clearList()
+        if data.ok then
+            if #data.list == 0 then
+                showListMessage("EmptyState", view.empty, Colors.InkSoft)
                 return
             end
-            for i, playerData in ipairs(leaderboardData) do
-                createLeaderboardEntry(playerData, i)
+            for i, playerData in ipairs(data.list) do
+                createLeaderboardEntry(view, playerData, i)
             end
         else
-            warn("LeaderboardClient: Failed to load leaderboard:", leaderboardData)
             showListMessage("ErrorState", "Failed to load leaderboard data", Colors.TextError)
         end
     end
 
-    local function loadMyRank()
-        local success, rankData = pcall(function()
-            return GetPlayerRank:Invoke()
-        end)
-        if not myRankInfo.Parent then
-            return
-        end
-
-        if success and rankData then
-            local rank = tonumber(rankData.rank) or 0
-            local entry = normalizeEntry(rankData)
-            rankValue.Text = rank > 0 and ("#" .. rank) or "–"
-            winsValue.Text = tostring(entry.totalWins)
-            matchesValue.Text = tostring(entry.totalMatches)
-            rateValue.Text = formatWinRate(entry.totalMatches, entry.winRatio)
+    local function renderMyRank(view, data)
+        if data.ok then
+            local entry = normalizeEntry(data.rank)
+            for i, statName in ipairs(view.stats) do
+                statTiles[i].value.Text = formatStat(statName, data.rank, entry)
+            end
             myRankInfo.Text = LocalPlayer.DisplayName
+            myRankInfo.TextColor3 = Colors.Ink
         else
-            warn("LeaderboardClient: Failed to load player rank:", rankData)
+            for _, tile in ipairs(statTiles) do
+                tile.value.Text = "–"
+            end
             myRankInfo.Text = "Failed to load rank data"
             myRankInfo.TextColor3 = Colors.TextError
         end
+    end
+
+    local function fetchBoard(boardName)
+        local entry = cache[boardName]
+        if entry then
+            return entry
+        end
+        entry = { listDone = false, rankDone = false }
+        cache[boardName] = entry
+
+        task.spawn(function()
+            local ok, result = pcall(function()
+                return GetLeaderboard:Invoke(nil, boardName)
+            end)
+            if not ok or type(result) ~= "table" then
+                warn("LeaderboardClient: Failed to load leaderboard:", result)
+            end
+            entry.list = { ok = ok and type(result) == "table", list = type(result) == "table" and result or {} }
+            entry.listDone = true
+            if entry.onUpdate then
+                entry.onUpdate()
+            end
+        end)
+        task.spawn(function()
+            local ok, result = pcall(function()
+                return GetPlayerRank:Invoke(boardName)
+            end)
+            if not ok or type(result) ~= "table" then
+                warn("LeaderboardClient: Failed to load player rank:", result)
+            end
+            entry.rank = { ok = ok and type(result) == "table", rank = type(result) == "table" and result or nil }
+            entry.rankDone = true
+            if entry.onUpdate then
+                entry.onUpdate()
+            end
+        end)
+        return entry
+    end
+
+    local function selectBoard(boardName)
+        currentBoard = boardName
+        requestToken += 1
+        local token = requestToken
+        local view = BOARD_VIEWS[boardName]
+
+        for name, button in pairs(tabButtons) do
+            UI.setButtonColor(button, name == boardName and Colors.Honey or Colors.Paper)
+        end
+        for i, statName in ipairs(view.stats) do
+            statTiles[i].title.Text = statName
+            statTiles[i].value.Text = "–"
+        end
+        buildHeader(view)
+        clearList()
+        showListMessage("LoadingState", "Loading...", Colors.InkSoft)
+
+        local entry = fetchBoard(boardName)
+        local function update()
+            if token ~= requestToken or not screenGui.Parent then
+                return
+            end
+            if entry.listDone then
+                renderList(view, entry.list)
+            end
+            if entry.rankDone then
+                renderMyRank(view, entry.rank)
+            end
+        end
+        entry.onUpdate = update
+        update()
+    end
+
+    for i, boardName in ipairs(BOARD_ORDER) do
+        tabButtons[boardName] = UI.createButton({
+            name = "Tab_" .. boardName,
+            text = BOARD_VIEWS[boardName].tab,
+            parent = tabBar,
+            size = UDim2.new(0, 170, 0, 52),
+            textSize = 22,
+            backgroundColor = Colors.Paper,
+            layoutOrder = i,
+            onClick = function()
+                if currentBoard ~= boardName then
+                    selectBoard(boardName)
+                end
+            end,
+        })
     end
 
     -- 关闭按钮
@@ -384,9 +546,7 @@ function LeaderboardClient.ShowLeaderboard()
     })
 
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    task.spawn(loadMyRank)
-    task.spawn(loadLeaderboard)
+    selectBoard(currentBoard)
 end
 
 return LeaderboardClient
