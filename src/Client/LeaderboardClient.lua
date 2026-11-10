@@ -86,7 +86,7 @@ local BOARD_VIEWS = {
                 { "BestScore", tostring(entry.bestScore) },
             }
         end,
-        stats = { "Rank", "Best Score", "Wins", "Win Rate" },
+        stats = { "Rank", "Best Score", "Win Rate" },
     },
 }
 
@@ -248,7 +248,7 @@ function LeaderboardClient.ShowLeaderboard(initialBoard)
     local statTiles = {}
     for i = 1, 4 do
         local title, value = createStat(statsRow, "Stat" .. i, i)
-        statTiles[i] = { title = title, value = value }
+        statTiles[i] = { frame = title.Parent, title = title, value = value }
     end
 
     -- 排行榜表格
@@ -489,9 +489,14 @@ function LeaderboardClient.ShowLeaderboard(initialBoard)
         for name, button in pairs(tabButtons) do
             UI.setButtonColor(button, name == boardName and Colors.Honey or Colors.Paper)
         end
-        for i, statName in ipairs(view.stats) do
-            statTiles[i].title.Text = statName
-            statTiles[i].value.Text = "–"
+        -- 数值块按本页签的数量均分宽度，多余的隐藏
+        local statCount = #view.stats
+        for i, tile in ipairs(statTiles) do
+            local statName = view.stats[i]
+            tile.frame.Visible = statName ~= nil
+            tile.frame.Size = UDim2.new(1 / statCount, -12, 1, 0)
+            tile.title.Text = statName or ""
+            tile.value.Text = "–"
         end
         buildHeader(view)
         clearList()
